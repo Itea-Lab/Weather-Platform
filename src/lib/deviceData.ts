@@ -1,13 +1,4 @@
-export interface Device {
-  id: string;
-  name: string;
-  description: string;
-  connectionType: "mqtts" | "https";
-  group: string;
-  status: "online" | "offline" | "maintenance";
-  lastSeen: string;
-  signalStrength: number;
-}
+import { Device } from "@/types/device"
 
 export const devices: Device[] = [
   {
@@ -39,5 +30,25 @@ export const devices: Device[] = [
     status: "online",
     lastSeen: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
     signalStrength: -45,
+  },
+  {
+    id: "device-004",
+    name: "Wind Speed Sensor",
+    description: "Anemometer for wind speed measurement",
+    connectionType: "mqtts",
+    group: "Outdoor Sensors",
+    status: "offline",
+    lastSeen: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    signalStrength: -50,
+  },
+  {
+    id: "device-005",
+    name: "Barometric Pressure Sensor",
+    description: "Measures atmospheric pressure",
+    connectionType: "mqtts",
+    group: "Weather Sensors",
+    status: "online",
+    lastSeen: new Date().toISOString(),
+    signalStrength: -40,
   },
 ];

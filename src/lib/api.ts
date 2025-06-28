@@ -1,65 +1,34 @@
 import useSWR from "swr";
 import { cardData, WindData, RainData } from "@/types/sensorData";
 import { Dataset } from "@/types/dataset";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 const fetcher = async (url: string) => {
   try {
-    // Get tokens from localStorage
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth-token") : null;
-    const csrfToken =
-      typeof window !== "undefined" ? localStorage.getItem("csrf-token") : null;
-
-    // Prepare headers
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString();
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
 
-    // Include CSRF token if available
-    if (csrfToken) {
-      headers["X-CSRF-Token"] = csrfToken;
-    }
-
-    // Include Auth token if available (as backup)
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Make the request (with credentials to include cookies)
     const res = await fetch(url, {
       headers,
-      credentials: "include", // Important: Send cookies with request
+      credentials: "include",
     });
 
-    // Handle HTTP errors
     if (!res.ok) {
-      let errorData;
-      try {
-        errorData = await res.json();
-      } catch (_error) {
-        errorData = { error: res.statusText || "Unknown error" };
-      }
-      // if (res.status === 401) {
-      //   console.log("Authentication required, redirecting to login");
-      // }
-      const error = new Error(
-        errorData.error || "API request failed"
-      );
+      const errorData = await res.json().catch(() => ({ error: res.statusText }));
+      const error = new Error(errorData.error || "API request failed");
       (error as any).status = res.status;
-      (error as any).info = errorData;
       throw error;
     }
 
-    // Parse the JSON response
-    return await res.json();;
+    return await res.json();
   } catch (error) {
-    // Handle network errors
-    if (error instanceof Error && error.message.includes("Failed to fetch")) {
-      const networkError = new Error("Cannot connect to server");
-      (networkError as any).isNetworkError = true;
-      throw networkError;
-    }
-
     throw error;
   }
 };
@@ -162,26 +131,21 @@ export function useDatasetData(
 
 export async function deleteDatapoint(timestamp: any) {
   try {
-    const token = localStorage.getItem("auth-token");
-    const csrfToken = localStorage.getItem("csrf-token");
-    if (!token || !csrfToken) {
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString();
+
+    if (!token) {
       throw new Error("Authentication required");
     }
-
-    const formattedTimestamp =
-      timestamp instanceof Date ? timestamp.toISOString() : timestamp;
-
-    // console.log("Deleting datapoint with timestamp:", formattedTimestamp);
 
     const response = await fetch("/api/weather/deleteData", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        "X-CSRF-Token": csrfToken, // Add the CSRF token
       },
-      body: JSON.stringify({ timestamp: formattedTimestamp }),
-      credentials: "include", // Include cookies
+      body: JSON.stringify({ timestamp }),
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -189,8 +153,7 @@ export async function deleteDatapoint(timestamp: any) {
       throw new Error(errorData.error || "Failed to delete data");
     }
 
-    const result = await response.json();
-    return result;
+    return await response.json();
   } catch (error) {
     console.error("Error deleting datapoint:", error);
     throw error;

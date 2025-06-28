@@ -41,3 +41,21 @@ yarn-error.log*
 next-env.d.ts
 
 gen_hash.ts
+
+# Amplify Gen 2 - Security Critical
+amplify_outputs.json
+.amplify/
+.aws-sam/
+cdk.out/
+.cdk.staging/
+
+# AWS CDK
+*.d.ts.map
+cdk.context.json
+
+# Amplify backend build artifacts
+/amplify/backend/awscloudformation/
+/amplify/backend/amplify-meta.json
+/amplify/#current-cloud-backend/
+/amplify/mock-data/
+/amplify/mock-api-resources/

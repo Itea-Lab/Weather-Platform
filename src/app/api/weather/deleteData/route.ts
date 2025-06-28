@@ -1,25 +1,10 @@
 import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth";
+import { withAuth } from "@/lib/amplifyAuth";
 
 export async function POST(request: Request) {
-  console.log("----- DELETE DATA REQUEST -----");
-  console.log("Headers:", Object.fromEntries(request.headers.entries()));
-  console.log("Cookies:", request.headers.get("cookie"));
-  console.log("----------------------------");
-
   return withAuth(request, async (req: Request, { user }: { user: any }) => {
-    const hasPermission =
-      user.roles &&
-      (user.roles.includes(process.env.ADMIN_ROLE));
-
-    if (!hasPermission) {
-      return NextResponse.json(
-        { error: "You don't have permission to delete data" },
-        { status: 403 }
-      );
-    }
     try {
-      const { timestamp } = await request.json();
+      const { timestamp } = await req.json();
 
       if (!timestamp) {
         return NextResponse.json(

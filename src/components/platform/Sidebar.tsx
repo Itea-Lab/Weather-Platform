@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/AuthContext";
 import {
   House,
   LayoutDashboard,
@@ -41,48 +41,53 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="bg-[#4D5E3F] text-white w-50 min-h-screen flex flex-col py-6">
-      <div className="p-3 flex flex-col h-full fixed">
+    <aside className="bg-[#4D5E3F] text-white w-64 h-screen flex flex-col sticky top-0 left-0 z-40">
+      <div className="p-4 flex flex-col h-full overflow-hidden">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-center">Heading</h2>
+          <h2 className="text-xl font-bold text-center truncate">Heading</h2>
         </div>
 
         <div className="mb-6">
-          <div className="px-4 py-3 rounded-lg bg-[#688055] mb-4">
-            <p className="text-sm opacity-75">Logged in as</p>
-            <p className="font-medium">{user?.name || "Loading..."}</p>
-            <p className="text-sm text-[#A8CD89]">
-              {user?.email || "Loading..."}
+          <div className="px-3 py-3 rounded-lg bg-[#688055] mb-4">
+            <p className="text-xs opacity-75">Logged in as</p>
+            <p className="font-medium text-sm truncate">
+              {user?.username || "Loading..."}
+            </p>
+            <p className="text-xs text-[#A8CD89] truncate">
+              {user?.signInDetails?.loginId || "Loading..."}
             </p>
           </div>
         </div>
 
-        <nav className="flex-1">
+        <nav className="flex-1 overflow-y-auto">
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <li key={item.path}>
                 <Link
                   href={item.path}
-                  className={`flex items-center px-4 py-3 rounded-lg hover:bg-[#84A26C] transition-colors ${
+                  className={`flex items-center px-3 py-3 rounded-lg hover:bg-[#84A26C] transition-colors text-sm ${
                     isActivePath(item.path) ? "bg-[#688055]" : ""
                   }`}
                 >
-                  <span className="mr-3">{item.icon}</span>
-                  {item.name}
+                  <span className="mr-3 flex-shrink-0">{item.icon}</span>
+                  <span className="truncate">{item.name}</span>
                 </Link>
               </li>
             ))}
           </ul>
+        </nav>
+
+        <div className="mt-auto pt-4">
           <button
             onClick={logout}
-            className="mt-6 space-y-2 w-full flex items-center px-4 py-3 rounded-lg hover:bg-[#84A26C] transition-colors"
+            className="w-full flex items-center px-3 py-3 rounded-lg hover:bg-[#84A26C] transition-colors text-sm"
           >
-            <span className="mr-3">
+            <span className="mr-3 flex-shrink-0">
               <LogOut />
             </span>
-            Logout
+            <span className="truncate">Logout</span>
           </button>
-        </nav>
+        </div>
       </div>
     </aside>
   );
