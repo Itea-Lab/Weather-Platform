@@ -59,3 +59,5 @@ cdk.context.json
 /amplify/#current-cloud-backend/
 /amplify/mock-data/
 /amplify/mock-api-resources/
+# Lambda function policies
+custom-policies.json
