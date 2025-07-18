@@ -4,8 +4,7 @@ export const devices: Device[] = [
   {
     id: "device-001",
     name: "Temperature Sensor #1",
-    description: "Outdoor temperature sensor",
-    connectionType: "mqtts",
+    connectionType: "MQTTS",
     group: "Outdoor Sensors",
     status: "online",
     lastSeen: new Date().toISOString(),
@@ -14,8 +13,7 @@ export const devices: Device[] = [
   {
     id: "device-002",
     name: "Humidity Monitor",
-    description: "Indoor humidity monitor",
-    connectionType: "mqtts",
+    connectionType: "MQTTS",
     group: "Indoor Sensors",
     status: "online",
     lastSeen: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
@@ -24,8 +22,7 @@ export const devices: Device[] = [
   {
     id: "device-003",
     name: "Multi Sensor Hub",
-    description: "Hub for multiple sensors",
-    connectionType: "mqtts",
+    connectionType: "MQTTS",
     group: "Sensor Hubs",
     status: "online",
     lastSeen: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
@@ -34,8 +31,7 @@ export const devices: Device[] = [
   {
     id: "device-004",
     name: "Wind Speed Sensor",
-    description: "Anemometer for wind speed measurement",
-    connectionType: "mqtts",
+    connectionType: "MQTTS",
     group: "Outdoor Sensors",
     status: "offline",
     lastSeen: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
@@ -44,8 +40,7 @@ export const devices: Device[] = [
   {
     id: "device-005",
     name: "Barometric Pressure Sensor",
-    description: "Measures atmospheric pressure",
-    connectionType: "mqtts",
+    connectionType: "MQTTS",
     group: "Weather Sensors",
     status: "online",
     lastSeen: new Date().toISOString(),

@@ -1,27 +1,27 @@
 import useSWR from "swr";
 import { cardData, WindData, RainData } from "@/types/sensorData";
 import { Dataset } from "@/types/dataset";
-import { fetchAuthSession } from "aws-amplify/auth";
+import {
+  DeviceRegistrationData,
+  DeviceRegistrationResponse,
+} from "@/types/device";
 
+// For GET requests only
 const fetcher = async (url: string) => {
   try {
-    const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     const res = await fetch(url, {
       headers,
-      credentials: "include",
+      credentials: "include", // This sends cookies automatically
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: res.statusText }));
+      const errorData = await res
+        .json()
+        .catch(() => ({ error: res.statusText }));
       const error = new Error(errorData.error || "API request failed");
       (error as any).status = res.status;
       throw error;
@@ -131,18 +131,10 @@ export function useDatasetData(
 
 export async function deleteDatapoint(timestamp: any) {
   try {
-    const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
-
-    if (!token) {
-      throw new Error("Authentication required");
-    }
-
     const response = await fetch("/api/weather/deleteData", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ timestamp }),
       credentials: "include",
@@ -156,6 +148,34 @@ export async function deleteDatapoint(timestamp: any) {
     return await response.json();
   } catch (error) {
     console.error("Error deleting datapoint:", error);
+    throw error;
+  }
+}
+
+export async function registerDevice(
+  deviceData: DeviceRegistrationData
+): Promise<DeviceRegistrationResponse> {
+  try {
+    const response = await fetch("/api/iot/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(deviceData),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(errorData.error || "Failed to register device");
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Error registering device:", error);
     throw error;
   }
 }

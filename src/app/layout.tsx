@@ -1,4 +1,3 @@
-// src/app/layout.tsx
 "use client";
 
 import type { Metadata } from "next";
@@ -25,7 +24,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    Amplify.configure(outputs);
+    // Configure Amplify with SSR support for cookie-based authentication
+    Amplify.configure(outputs, {
+      ssr: true,
+    });
   }, []);
 
   return (

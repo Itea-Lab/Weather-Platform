@@ -123,19 +123,6 @@ pnpm-lock.yaml          # Lockfile for package versions
 tsconfig.json           # TypeScript configuration file
 ```
 
-## Data Format
-the sensor data must match the following format:
-```json
-{
-  "id": "1",
-  "timestamp": "2024-06-05T12:00:00Z",
-  "temperature": 23.5,
-  "humidity": 65.2,
-  "pressure": 1013.25
-}
-```
-The id and timestamp fields are required, while additional sensor data fields can be any numeric values.
-
 ### Run the Application
 #### Run the development server:
 ```bash

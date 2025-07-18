@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerRunner } from "@aws-amplify/adapter-nextjs";
 import { getCurrentUser } from "aws-amplify/auth/server";
 import { cookies } from "next/headers";
-import outputs from "../../amplify_outputs.json";
-
-const { runWithAmplifyServerContext } = createServerRunner({ config: outputs });
+import { runWithAmplifyServerContext } from "@/lib/amplifyServerConfig";
 
 export async function withAuth(
   request: Request,

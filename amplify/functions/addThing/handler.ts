@@ -7,6 +7,8 @@ import {
   AttachPolicyCommand,
   AttachThingPrincipalCommand,
   DescribeEndpointCommand,
+  CreateKeysAndCertificateCommand,
+  UpdateCertificateCommand,
 } from "@aws-sdk/client-iot";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 
@@ -20,7 +22,6 @@ export const handler: Handler = async (event) => {
   const thingName = event.thingName || `Thing-${Date.now()}`;
   const thingGroupName = env.AWS_IOT_THING_GROUP_NAME;
   const policyName = env.AWS_IOT_POLICY_NAME;
-  const principal = event.principal; // Certificate ARN from device registration
 
   try {
     // Validate inputs
@@ -29,13 +30,8 @@ export const handler: Handler = async (event) => {
         "AWS_IOT_THING_GROUP_NAME and AWS_IOT_POLICY_NAME must be defined"
       );
     }
-    if (!principal) {
-      throw new Error(
-        "Principal (certificate ARN) is required to attach policy"
-      );
-    }
 
-    // Dynamically get AWS account ID (no secrets needed!)
+    // Dynamically get AWS account ID
     const callerIdentity = await sts.send(new GetCallerIdentityCommand({}));
     const accountId = callerIdentity.Account;
 
@@ -47,20 +43,19 @@ export const handler: Handler = async (event) => {
     );
     const iotEndpoint = endpointResponse.endpointAddress;
 
-    console.log(`Region: ${region}`);
-    console.log(`Account ID: ${accountId}`);
-    console.log(`IoT Endpoint for devices: ${iotEndpoint}`);
-    console.log(`Policy: ${policyName}`);
-    console.log(`Creating Thing: ${thingName}`);
 
-    // Step 1: Create IoT Thing (represents your weather sensor)
+    // Step 1: Create IoT Thing, create certificate and keys
+    const certResponse = await iot.send(
+      new CreateKeysAndCertificateCommand({ setAsActive: true })
+    );
+    const certificateArn = certResponse.certificateArn!;
+
     await iot.send(
       new CreateThingCommand({
         thingName,
         attributePayload: {
           attributes: {
             createdAt: new Date().toISOString(),
-            // Store connection info for later device configuration
             iotEndpoint: iotEndpoint || "unknown",
             accountId: accountId || "unknown",
           },
@@ -80,7 +75,7 @@ export const handler: Handler = async (event) => {
     await iot.send(
       new AttachThingPrincipalCommand({
         thingName,
-        principal,
+        principal: certificateArn,
       })
     );
 
@@ -88,7 +83,7 @@ export const handler: Handler = async (event) => {
     await iot.send(
       new AttachPolicyCommand({
         policyName,
-        target: principal,
+        target: certificateArn,
       })
     );
 
@@ -100,18 +95,21 @@ export const handler: Handler = async (event) => {
         thingName,
         thingGroup: thingGroupName,
         policy: policyName,
-        // 🔌 Device connection information
+        // Device connection information
         deviceConnectionInfo: {
           endpoint: iotEndpoint,
           port: 8883,
-          protocol: "MQTT over TLS",
+          protocol: "MQTTS",
           topics: {
-            publish: `weather/data/${thingName}`,
-            subscribe: `weather/commands/${thingName}`,
+            publish: `weatherPlatform/telemetry`,
           },
-          certificateArn: principal,
         },
-        accountId,
+        certificates: {
+          certificateArn,
+          certificatePem: certResponse.certificatePem,
+          privateKey: certResponse.keyPair?.PrivateKey,
+          publicKey: certResponse.keyPair?.PublicKey,
+        },
       }),
     };
   } catch (error) {

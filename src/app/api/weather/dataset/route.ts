@@ -2,85 +2,8 @@ import { NextResponse } from "next/server";
 import { executeQuery } from "@/lib/influxdb";
 import { Dataset } from "@/types/dataset";
 
-// const sampleDatasets: Dataset[] = [
-//   {
-//     id: "1",
-//     timestamp: "2025-05-09T08:00:00Z",
-//     temperature: 22.5,
-//     humidity: 65,
-//     pressure: 1013.2,
-//     avgWindSpeed: 10.5,
-//     maxWindSpeed: 15.2,
-//     windDirection: 270,
-//     rainFallbyDay: 5.0,
-//     rainFallbyHour: 0.2,
-//     status: "active",
-//   },
-//   {
-//     id: "2",
-//     timestamp: "2025-05-09T09:00:00Z",
-//     temperature: 23.1,
-//     humidity: 62,
-//     pressure: 1012.8,
-//     avgWindSpeed: 8.7,
-//     maxWindSpeed: 12.9,
-//     windDirection: 180,
-//     rainFallbyDay: 3.5,
-//     rainFallbyHour: 0.1,
-//     status: "active",
-//   },
-//   {
-//     id: "3",
-//     timestamp: "2025-05-09T10:00:00Z",
-//     temperature: 21.8,
-//     humidity: 70,
-//     pressure: 1014.1,
-//     avgWindSpeed: 12.3,
-//     maxWindSpeed: 18.6,
-//     windDirection: 90,
-//     rainFallbyDay: 0.0,
-//     rainFallbyHour: 0.0,
-//     status: "processing",
-//   },
-//   {
-//     id: "4",
-//     timestamp: "2025-05-08T11:00:00Z",
-//     temperature: 20.4,
-//     humidity: 75,
-//     pressure: 1010.5,
-//     avgWindSpeed: 9.2,
-//     maxWindSpeed: 14.1,
-//     windDirection: 225,
-//     rainFallbyDay: 7.2,
-//     rainFallbyHour: 0.5,
-//     status: "active",
-//   },
-//   {
-//     id: "5",
-//     timestamp: "2025-05-08T12:00:00Z",
-//     temperature: 19.7,
-//     humidity: 80,
-//     pressure: 1009.8,
-//     avgWindSpeed: 11.1,
-//     maxWindSpeed: 16.8,
-//     windDirection: 315,
-//     rainFallbyDay: 10.1,
-//     rainFallbyHour: 1.0,
-//     status: "active",
-//   },
-// ];
-
 // GET handler for the /api/auth endpoint
 export async function GET(request: Request) {
-  // try {
-  //   //return the sample data
-  //   return NextResponse.json(sampleDatasets, { status: 200 });
-  // } catch (error) {
-  //   return NextResponse.json(
-  //     { error: "Failed to fetch datasets" },
-  //     { status: 500 }
-  //   );
-  // }
   try {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get("range") || "-30d";

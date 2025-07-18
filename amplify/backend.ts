@@ -24,6 +24,8 @@ const iotPolicyStatement = new iam.PolicyStatement({
     "iot:DescribeEndpoint", // Fetch IoT endpoint
     "iot:ListThingGroupsForThing",
     "iot:ListPrincipalPolicies",
+    "iot:CreateKeysAndCertificate",
+    "iot:UpdateCertificate",
   ],
   resources: [
     `arn:aws:iot:${region}:${accountId}:thing/*`,
