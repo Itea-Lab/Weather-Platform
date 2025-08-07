@@ -9,10 +9,10 @@ export const backend = defineBackend({
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
-
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
+// IoT permissions for the Lambda function itself
 const iotPolicyStatement = new iam.PolicyStatement({
   sid: "AllowIoTActions",
   actions: [
@@ -21,7 +21,7 @@ const iotPolicyStatement = new iam.PolicyStatement({
     "iot:AttachThingPrincipal",
     "iot:AttachPolicy",
     "iot:DescribeThing",
-    "iot:DescribeEndpoint", // Fetch IoT endpoint
+    "iot:DescribeEndpoint",
     "iot:ListThingGroupsForThing",
     "iot:ListPrincipalPolicies",
     "iot:CreateKeysAndCertificate",
@@ -36,14 +36,30 @@ const iotPolicyStatement = new iam.PolicyStatement({
   ],
 });
 
-// Add STS permissions to get account ID
+// STS permissions for the Lambda function
 const stsPolicyStatement = new iam.PolicyStatement({
-    sid: "AllowSTSAccess",
-    actions: [
-      "sts:GetCallerIdentity", // Get account ID
-    ],
-    resources: ["*"],
+  sid: "AllowSTSAccess",
+  actions: ["sts:GetCallerIdentity"],
+  resources: ["*"],
 });
-  
+
 addThingLambda.addToRolePolicy(iotPolicyStatement);
 addThingLambda.addToRolePolicy(stsPolicyStatement);
+
+// Grant authenticated users permission to invoke the Lambda function
+const authenticatedRole = backend.auth.resources.authenticatedUserIamRole;
+authenticatedRole.addToPrincipalPolicy(
+  new iam.PolicyStatement({
+    sid: "AllowLambdaInvoke",
+    effect: iam.Effect.ALLOW,
+    actions: ["lambda:InvokeFunction"],
+    resources: [addThingLambda.functionArn],
+  })
+);
+
+backend.addOutput({
+  custom: {
+    addThingFunctionName: addThingLambda.functionName,
+    addThingFunctionArn: addThingLambda.functionArn,
+  },
+});

@@ -9,9 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity": "^3.862.0",
     "@aws-sdk/client-iot": "^3.840.0",
     "@aws-sdk/client-lambda": "^3.844.0",
     "@aws-sdk/client-sts": "^3.844.0",
+    "@aws-sdk/credential-provider-cognito-identity": "^3.862.0",
     "@influxdata/influxdb-client": "^1.35.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",

@@ -166,10 +166,18 @@ export async function registerDevice(
     });
 
     if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ error: response.statusText }));
-      throw new Error(errorData.error || "Failed to register device");
+      const errorData = await response.json().catch(() => ({
+        error: response.statusText,
+        details: `HTTP ${response.status} error occurred`,
+      }));
+
+      // Throw an error with more detailed information
+      throw new Error(
+        errorData.error ||
+          (errorData.details
+            ? `${response.statusText}: ${errorData.details}`
+            : "Failed to register device")
+      );
     }
 
     const result = await response.json();
