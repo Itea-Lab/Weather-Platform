@@ -11,15 +11,37 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/iot/")
   ) {
     try {
-      await runWithAmplifyServerContext({
+      console.log(
+        "Middleware: Authenticating request for:",
+        request.nextUrl.pathname
+      );
+
+      const user = await runWithAmplifyServerContext({
         nextServerContext: { cookies },
         operation: async (contextSpec) => {
-          await getCurrentUser(contextSpec);
+          const currentUser = await getCurrentUser(contextSpec);
+          console.log(
+            "Middleware: Authentication successful for user:",
+            (currentUser as any)?.userId || (currentUser as any)?.username
+          );
+          return currentUser;
         },
       });
-    } catch {
+
+      console.log("Middleware: Allowing authenticated request to proceed");
+    } catch (error: any) {
+      console.log(
+        "Middleware: Authentication failed for:",
+        request.nextUrl.pathname,
+        "Error:",
+        error?.message
+      );
       return NextResponse.json(
-        { error: "Authentication required" },
+        {
+          error: "Authentication required",
+          details: error?.message || "User not authenticated",
+          recoverySuggestion: "Please sign in to access this resource",
+        },
         { status: 401 }
       );
     }

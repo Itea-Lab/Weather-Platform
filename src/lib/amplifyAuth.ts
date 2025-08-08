@@ -8,13 +8,27 @@ export async function withAuth(
   handler: (req: Request, context: { user: any }) => Promise<Response>
 ) {
   try {
+    // Get cookies function for the server context
+    const cookiesFunction = cookies;
+
+    console.log("Attempting authentication...");
+
     const user = await runWithAmplifyServerContext({
-      nextServerContext: { cookies },
+      nextServerContext: { cookies: cookiesFunction },
       operation: async (contextSpec) => {
         try {
-          return await getCurrentUser(contextSpec);
-        } catch (userError) {
-          console.error("getCurrentUser error:", userError);
+          const currentUser = await getCurrentUser(contextSpec);
+          console.log(
+            "getCurrentUser successful:",
+            (currentUser as any)?.username || (currentUser as any)?.userId
+          );
+          return currentUser;
+        } catch (userError: any) {
+          console.error("getCurrentUser error details:", {
+            name: userError?.name,
+            message: userError?.message,
+            recoverySuggestion: userError?.recoverySuggestion,
+          });
           throw userError;
         }
       },
@@ -22,7 +36,7 @@ export async function withAuth(
 
     console.log(
       "Successfully authenticated user:",
-      user?.username || user?.userId
+      (user as any)?.username || (user as any)?.userId
     );
     return await handler(request, { user });
   } catch (error) {
@@ -34,6 +48,7 @@ export async function withAuth(
           error instanceof Error
             ? error.message
             : "Unknown authentication error",
+        recoverySuggestion: "Please sign in again to access this resource",
       },
       { status: 401 }
     );
