@@ -22,7 +22,6 @@ export async function getAWSRegion(): Promise<string> {
     return regionPromise;
   }
 
-  // Start region detection
   regionPromise = detectRegion();
 
   try {

@@ -1,4 +1,4 @@
-# AW## Setup Guides
+# AWS Setup Guides
 
 ### Getting Started
 
