@@ -1,5 +1,6 @@
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { InvokeCommand } from "@aws-sdk/client-lambda";
 import { AddThingPayload } from "@/types/lambda";
+import { createLambdaClient } from "./awsConfig";
 
 // Server-side function that can read amplify outputs
 export async function getAmplifyFunctionName(): Promise<string> {
@@ -21,11 +22,8 @@ export async function getAmplifyFunctionName(): Promise<string> {
 // Server-side Lambda invocation (for use in API routes)
 export async function invokeAddThingLambdaServerSide(payload: AddThingPayload) {
   try {
-    // Initialize Lambda client with server's AWS credentials
-    const lambdaClient = new LambdaClient({
-      region: process.env.AWS_REGION,
-      // Server will use the default credential chain (IAM user, role, etc.)
-    });
+    // Get pre-configured Lambda client with correct region
+    const lambdaClient = await createLambdaClient();
 
     // Get the actual function name from amplify outputs
     const functionName = await getAmplifyFunctionName();

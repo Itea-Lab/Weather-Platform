@@ -93,11 +93,10 @@ export async function POST(request: Request) {
 
       // Fallback to direct Lambda invocation with explicit function name
       const { getAmplifyFunctionName } = await import("@/lib/lambdaInvoker");
-      const functionName = await getAmplifyFunctionName();
+      const { createLambdaClient } = await import("@/lib/awsConfig");
 
-      const lambdaClient = new LambdaClient({
-        region: process.env.AWS_REGION,
-      });
+      const functionName = await getAmplifyFunctionName();
+      const lambdaClient = await createLambdaClient();
 
       const command = new InvokeCommand({
         FunctionName: functionName,

@@ -8,7 +8,6 @@ import {
   AttachThingPrincipalCommand,
   DescribeEndpointCommand,
   CreateKeysAndCertificateCommand,
-  UpdateCertificateCommand,
 } from "@aws-sdk/client-iot";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 
@@ -17,7 +16,7 @@ export const handler: Handler = async (event) => {
   
   // Initialize AWS clients
   const iot = new IoTClient({ region });
-  const sts = new STSClient({ region }); // STS for getting current AWS account info
+  const sts = new STSClient({ region });
 
   const thingName = event.thingName || `Thing-${Date.now()}`;
   const thingGroupName = env.AWS_IOT_THING_GROUP_NAME;
