@@ -2,22 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "aws-amplify/auth/server";
 import { cookies } from "next/headers";
 import { runWithAmplifyServerContext } from "@/lib/amplifyServerConfig";
+import { LegacyAuthResult, AuthRetryOptions } from "@/types/userAuth";
 
 // Helper function to add delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-interface AuthResult {
-  user: any | null;
-  isAuthenticated: boolean;
-  attempt: number;
-  tokensPresent?: boolean;
-}
-
-interface AuthRetryOptions {
-  maxAttempts?: number;
-  baseDelay?: number;
-  routeName?: string;
-}
 
 /**
  * Enhanced authentication with retry logic and fallback to token-only validation
@@ -25,7 +13,7 @@ interface AuthRetryOptions {
  */
 export async function authenticateWithRetry(
   options: AuthRetryOptions = {}
-): Promise<AuthResult> {
+): Promise<LegacyAuthResult> {
   const { maxAttempts = 3, baseDelay = 200, routeName = "API" } = options;
 
   // First, check if we have Cognito tokens
@@ -149,7 +137,7 @@ export async function authenticateWithRetry(
  */
 export async function authenticateQuick(
   routeName: string = "API"
-): Promise<AuthResult> {
+): Promise<LegacyAuthResult> {
   return authenticateWithRetry({
     maxAttempts: 3, // Increased from 2 to 3
     baseDelay: 300, // Increased from 100ms to 300ms
@@ -162,7 +150,7 @@ export async function authenticateQuick(
  */
 export async function authenticateStandard(
   routeName: string = "API"
-): Promise<AuthResult> {
+): Promise<LegacyAuthResult> {
   return authenticateWithRetry({
     maxAttempts: 4, // Increased from 3 to 4
     baseDelay: 400, // Increased from 200ms to 400ms
@@ -175,7 +163,7 @@ export async function authenticateStandard(
  */
 export async function authenticateRobust(
   routeName: string = "API"
-): Promise<AuthResult> {
+): Promise<LegacyAuthResult> {
   return authenticateWithRetry({
     maxAttempts: 5, // Increased from 4 to 5
     baseDelay: 500, // Increased from 250ms to 500ms
@@ -188,7 +176,7 @@ export async function authenticateRobust(
  */
 export async function authenticateUltra(
   routeName: string = "API"
-): Promise<AuthResult> {
+): Promise<LegacyAuthResult> {
   return authenticateWithRetry({
     maxAttempts: 6,
     baseDelay: 750,

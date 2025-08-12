@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { authenticateWithTokenOnly } from "@/lib/tokenAuth";
+import { authenticateAPI } from "@/lib/auth";
 
 export async function DELETE(request: Request) {
   try {
-    // Authentication already validated by middleware - just get user info for logging
-    const authResult = await authenticateWithTokenOnly("delete-device");
+    // Authentication already validated by middleware - get user info for logging
+    const user = await authenticateAPI("delete-device");
     console.log(
       `Route: User info for delete-device: ${
-        authResult.user?.username || "token-validated"
+        user?.username || "authenticated-user"
       }`
     );
 
@@ -175,10 +175,7 @@ export async function DELETE(request: Request) {
       success: true,
       ...successBody,
       deletedAt: new Date().toISOString(),
-      deletedBy:
-        authResult.user?.email ||
-        authResult.user?.username ||
-        "token-validated-user",
+      deletedBy: user?.email || user?.username || "authenticated-user",
     });
   } catch (error) {
     console.error("Device deletion error:", error);

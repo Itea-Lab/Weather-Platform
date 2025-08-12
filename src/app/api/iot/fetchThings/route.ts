@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { authenticateWithTokenOnly } from "@/lib/tokenAuth";
+import { authenticateAPI } from "@/lib/auth";
 import { createLambdaClient } from "@/lib/awsConfig";
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 export async function GET() {
   try {
-    // Authentication already validated by middleware - just get user info for logging
-    const authResult = await authenticateWithTokenOnly("fetchThings");
+    // Authentication already validated by middleware - get user info for logging
+    const user = await authenticateAPI("fetchThings");
     console.log(
       `Route: User info for fetchThings: ${
-        authResult.user?.username || "token-validated"
+        user?.username || "authenticated-user"
       }`
     );
 
@@ -73,10 +73,7 @@ export async function GET() {
       success: true,
       ...successBody,
       fetchedAt: new Date().toISOString(),
-      fetchedBy:
-        authResult.user?.email ||
-        authResult.user?.username ||
-        "token-validated-user",
+      fetchedBy: user?.email || user?.username || "authenticated-user",
     });
   } catch (error) {
     console.error("Device fetch error:", error);
