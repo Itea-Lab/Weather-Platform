@@ -6,6 +6,19 @@ export interface Device {
   status: "online" | "offline";
   lastSeen: string;
   signalStrength: number;
+  thingTypeName?: string;
+  version?: number;
+  attributes?: Record<string, string>;
+}
+
+export interface DeviceListResponse {
+  success: boolean;
+  message: string;
+  devices: Device[];
+  thingGroup: string;
+  totalCount: number;
+  fetchedAt: string;
+  fetchedBy: string;
 }
 
 export interface DeviceRegistrationData {

@@ -2,17 +2,20 @@ import { defineBackend } from "@aws-amplify/backend";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { auth } from "./auth/resource";
 import { addThing } from "./functions/addThing/resource";
+import { fetchThings } from "./functions/fetchThings/resource";
 
 export const backend = defineBackend({
   auth,
   addThing,
+  fetchThings,
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
+const fetchThingsLambda = backend.fetchThings.resources.lambda;
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
-// IoT permissions for the Lambda function itself
+// IoT permissions for the addThing Lambda function
 const iotPolicyStatement = new iam.PolicyStatement({
   sid: "AllowIoTActions",
   actions: [
@@ -36,24 +39,43 @@ const iotPolicyStatement = new iam.PolicyStatement({
   ],
 });
 
-// STS permissions for the Lambda function
+// IoT permissions for the fetchThings Lambda function
+const fetchThingsIoTPolicyStatement = new iam.PolicyStatement({
+  sid: "AllowFetchThingsIoTActions",
+  actions: [
+    "iot:ListThingsInThingGroup",
+    "iot:DescribeThing",
+    "iot:DescribeThingGroup",
+  ],
+  resources: [
+    `arn:aws:iot:${region}:${accountId}:thing/*`,
+    `arn:aws:iot:${region}:${accountId}:thinggroup/ITeaWeatherHub`,
+  ],
+});
+
+// STS permissions for both Lambda functions
 const stsPolicyStatement = new iam.PolicyStatement({
   sid: "AllowSTSAccess",
   actions: ["sts:GetCallerIdentity"],
   resources: ["*"],
 });
 
+// Apply permissions to addThing Lambda
 addThingLambda.addToRolePolicy(iotPolicyStatement);
 addThingLambda.addToRolePolicy(stsPolicyStatement);
 
-// Grant authenticated users permission to invoke the Lambda function
+// Apply permissions to fetchThings Lambda
+fetchThingsLambda.addToRolePolicy(fetchThingsIoTPolicyStatement);
+fetchThingsLambda.addToRolePolicy(stsPolicyStatement);
+
+// Grant authenticated users permission to invoke both Lambda functions
 const authenticatedRole = backend.auth.resources.authenticatedUserIamRole;
 authenticatedRole.addToPrincipalPolicy(
   new iam.PolicyStatement({
     sid: "AllowLambdaInvoke",
     effect: iam.Effect.ALLOW,
     actions: ["lambda:InvokeFunction"],
-    resources: [addThingLambda.functionArn],
+    resources: [addThingLambda.functionArn, fetchThingsLambda.functionArn],
   })
 );
 
@@ -61,5 +83,7 @@ backend.addOutput({
   custom: {
     addThingFunctionName: addThingLambda.functionName,
     addThingFunctionArn: addThingLambda.functionArn,
+    fetchThingsFunctionName: fetchThingsLambda.functionName,
+    fetchThingsFunctionArn: fetchThingsLambda.functionArn,
   },
 });

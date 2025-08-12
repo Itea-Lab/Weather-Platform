@@ -4,6 +4,7 @@ import { Dataset } from "@/types/dataset";
 import {
   DeviceRegistrationData,
   DeviceRegistrationResponse,
+  DeviceListResponse,
 } from "@/types/device";
 
 // For GET requests only
@@ -186,4 +187,45 @@ export async function registerDevice(
     console.error("Error registering device:", error);
     throw error;
   }
+}
+
+// Hook to fetch devices from AWS IoT Core
+export function useDevices() {
+  const { data, error, isLoading, mutate } = useSWR<DeviceListResponse>(
+    "/api/iot/fetchThings",
+    fetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      fallbackData: {
+        success: true,
+        message: "Loading devices...",
+        devices: [],
+        thingGroup: "ITeaWeatherHub",
+        totalCount: 0,
+        fetchedAt: new Date().toISOString(),
+        fetchedBy: "",
+      },
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Don't retry on 404s or auth errors
+        if (error.status === 404 || error.status === 401 || retryCount >= 3)
+          return;
+
+        // Retry after 5 seconds
+        setTimeout(() => revalidate({ retryCount }), 5000);
+      },
+    }
+  );
+
+  return {
+    devices: data?.devices || [],
+    totalCount: data?.totalCount || 0,
+    thingGroup: data?.thingGroup || "ITeaWeatherHub",
+    error: error
+      ? error instanceof Error
+        ? error
+        : new Error(String(error))
+      : null,
+    isLoading,
+    mutate, // For manual refresh
+  };
 }

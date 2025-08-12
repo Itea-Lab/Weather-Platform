@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Settings, Wifi, WifiOff } from "lucide-react";
-import { devices } from "@/lib/deviceData";
+import { useDevices } from "@/lib/api";
 
 interface DeviceProps {
   title: string;
@@ -10,7 +9,7 @@ interface DeviceProps {
 }
 
 export default function DeviceStatusCard({ title, icon }: DeviceProps) {
-  const [deviceList, setDeviceList] = useState(devices);
+  const { devices } = useDevices();
 
   const getIcon = () => {
     switch (icon) {
@@ -24,15 +23,15 @@ export default function DeviceStatusCard({ title, icon }: DeviceProps) {
   };
 
   const getDeviceCount = () => {
-    return deviceList.length;
+    return devices.length;
   };
 
   const getOnlineCount = () => {
-    return deviceList.filter((device) => device.status === "online").length;
+    return devices.filter((device) => device.status === "online").length;
   };
 
   const getOfflineCount = () => {
-    return deviceList.filter((device) => device.status === "offline").length;
+    return devices.filter((device) => device.status === "offline").length;
   };
 
   const getValue = () => {
@@ -45,7 +44,7 @@ export default function DeviceStatusCard({ title, icon }: DeviceProps) {
     if (icon === "all") {
       return getDeviceCount();
     }
-    return deviceList.length;
+    return devices.length;
   };
 
   return (

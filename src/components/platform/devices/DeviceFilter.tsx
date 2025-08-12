@@ -1,4 +1,31 @@
-export default function DeviceFilter() {
+"use client";
+
+import { useState } from "react";
+
+interface DeviceFilterProps {
+  onGroupChange?: (group: string) => void;
+  onStatusChange?: (status: string) => void;
+}
+
+export default function DeviceFilter({
+  onGroupChange,
+  onStatusChange,
+}: DeviceFilterProps) {
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+
+  const handleGroupChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setSelectedGroup(value);
+    onGroupChange?.(value);
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setSelectedStatus(value);
+    onStatusChange?.(value);
+  };
+
   return (
     <div className="flex flex-col md:flex-row items-start sm:items-start gap-3 sm:gap-4">
       <div className="flex items-center gap-2">
@@ -10,13 +37,12 @@ export default function DeviceFilter() {
         </label>
         <select
           id="group"
+          value={selectedGroup}
+          onChange={handleGroupChange}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#688055] focus:border-[#688055] bg-white min-w-[120px]"
         >
           <option value="">All Groups</option>
-          <option value="outdoor_sensors">Outdoor Sensors</option>
-          <option value="indoor_sensors">Indoor Sensors</option>
-          <option value="sensor_hubs">Sensor Hubs</option>
-          <option value="weather_sensors">Weather Sensors</option>
+          <option value="ITeaWeatherHub">ITeaWeatherHub</option>
         </select>
       </div>
 
@@ -29,6 +55,8 @@ export default function DeviceFilter() {
         </label>
         <select
           id="status"
+          value={selectedStatus}
+          onChange={handleStatusChange}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#688055] focus:border-[#688055] bg-white min-w-[100px]"
         >
           <option value="">All Status</option>

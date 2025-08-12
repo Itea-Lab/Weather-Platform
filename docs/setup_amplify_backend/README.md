@@ -22,6 +22,7 @@ This directory contains comprehensive setup guides for AWS Amplify Generation 2 
 ### Specific Features
 
 - [IoT Device Management](./add_device.md/README.md) - IoT Core integration and device registration
+- [IoT Device Fetching](./fetchThings/README.md) - Device data retrieval
 - [Data Processing](./setup_glue/README.md) - AWS Glue for ETL operations
 
 ## Quick Start
