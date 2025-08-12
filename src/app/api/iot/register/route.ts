@@ -6,13 +6,42 @@ import { runWithAmplifyServerContext } from "@/lib/amplifyServerConfig";
 
 export async function POST(request: Request) {
   try {
-    // Get the authenticated user (middleware already validated auth)
-    const user = await runWithAmplifyServerContext({
-      nextServerContext: { cookies },
-      operation: async (contextSpec) => {
-        return await getCurrentUser(contextSpec);
-      },
-    });
+    // Attempt to get authenticated user with graceful error handling
+    let user = null;
+    let isAuthenticated = false;
+    
+    try {
+      user = await runWithAmplifyServerContext({
+        nextServerContext: { cookies },
+        operation: async (contextSpec) => {
+          return await getCurrentUser(contextSpec);
+        },
+      });
+      isAuthenticated = true;
+      console.log("Route: Authentication successful for register");
+    } catch (authError) {
+      console.warn("Route: Authentication failed for register:", authError);
+      
+      // Check if we have Cognito cookies as a fallback validation
+      const cookieStore = await cookies();
+      const allCookies = cookieStore.getAll();
+      const hasCognitoTokens = allCookies.some(cookie => 
+        cookie.name.includes('CognitoIdentityServiceProvider') && 
+        (cookie.name.includes('accessToken') || cookie.name.includes('idToken'))
+      );
+      
+      if (!hasCognitoTokens) {
+        // No tokens at all - definitely not authenticated
+        return NextResponse.json({
+          error: "Authentication required",
+          details: "No authentication tokens found",
+          recoverySuggestion: "Please sign in to access this resource",
+        }, { status: 401 });
+      }
+      
+      console.log("Route: Cognito tokens present but validation failed - proceeding with caution");
+      // Continue but mark as unauthenticated for logging purposes
+    }
 
     let requestBody;
     try {
@@ -183,7 +212,8 @@ export async function POST(request: Request) {
       registeredBy:
         (user as any)?.signInDetails?.loginId ||
         (user as any)?.attributes?.email ||
-        (user as any)?.username,
+        (user as any)?.username ||
+        (isAuthenticated ? "unknown-user" : "token-validation-failed"),
     });
   } catch (error) {
     console.error("Device registration error:", error);

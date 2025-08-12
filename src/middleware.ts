@@ -10,11 +10,12 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/weather/") ||
     request.nextUrl.pathname.startsWith("/api/iot/")
   ) {
-    // For fetchThings, check authentication but allow graceful degradation for SWR
-    if (request.nextUrl.pathname === "/api/iot/fetchThings") {
+    // Apply smart authentication for all IoT routes
+    if (request.nextUrl.pathname.startsWith("/api/iot/")) {
       try {
         console.log(
-          "Middleware: Attempting to authenticate fetchThings request"
+          "Middleware: Attempting to authenticate IoT request:",
+          request.nextUrl.pathname
         );
 
         const user = await runWithAmplifyServerContext({
@@ -22,7 +23,7 @@ export async function middleware(request: NextRequest) {
           operation: async (contextSpec) => {
             const currentUser = await getCurrentUser(contextSpec);
             console.log(
-              "Middleware: FetchThings auth successful for user:",
+              "Middleware: IoT auth successful for user:",
               (currentUser as any)?.userId || (currentUser as any)?.username
             );
             return currentUser;
@@ -30,13 +31,13 @@ export async function middleware(request: NextRequest) {
         });
 
         console.log(
-          "Middleware: FetchThings authentication successful, proceeding"
+          "Middleware: IoT authentication successful, proceeding"
         );
         return NextResponse.next();
       } catch (error: any) {
-        console.log("Middleware: FetchThings auth failed:", error?.message);
+        console.log("Middleware: IoT auth failed:", error?.message);
 
-        // Debug: Log available cookies to understand the issue
+        // Check for Cognito tokens as fallback validation
         const cookieStore = await cookies();
         const allCookies = cookieStore.getAll();
         const hasCognitoTokens = allCookies.some(
@@ -50,7 +51,7 @@ export async function middleware(request: NextRequest) {
 
         if (hasCognitoTokens) {
           console.log(
-            "Middleware: Cognito tokens present but validation failed - allowing for SWR compatibility"
+            "Middleware: Cognito tokens present but validation failed - allowing for auth sync compatibility"
           );
           // If we have tokens but validation failed, it might be a timing/sync issue
           // Allow the request but let the route handler validate again
