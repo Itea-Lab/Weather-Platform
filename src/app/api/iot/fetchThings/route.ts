@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
-import { authenticateQuick } from "@/lib/amplifyAuth";
+import { authenticateWithTokenOnly } from "@/lib/tokenAuth";
 import { createLambdaClient } from "@/lib/awsConfig";
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 export async function GET() {
   try {
-    // Use quick authentication for background device fetching
-    const authResult = await authenticateQuick("fetchThings");
-
-    if (!authResult.isAuthenticated) {
-      return NextResponse.json(
-        {
-          error: "Authentication required",
-          details: "No valid authentication tokens found",
-        },
-        { status: 401 }
-      );
-    }
-
+    // Authentication already validated by middleware - just get user info for logging
+    const authResult = await authenticateWithTokenOnly("fetchThings");
     console.log(
-      `Route: Authentication established for fetchThings (took ${authResult.attempt} attempts)`
+      `Route: User info for fetchThings: ${
+        authResult.user?.username || "token-validated"
+      }`
     );
 
     // Get function name from amplify outputs
@@ -83,12 +74,9 @@ export async function GET() {
       ...successBody,
       fetchedAt: new Date().toISOString(),
       fetchedBy:
-        authResult.user?.signInDetails?.loginId ||
-        authResult.user?.attributes?.email ||
+        authResult.user?.email ||
         authResult.user?.username ||
-        (authResult.tokensPresent
-          ? "token-validated-user"
-          : "authenticated-user"),
+        "token-validated-user",
     });
   } catch (error) {
     console.error("Device fetch error:", error);

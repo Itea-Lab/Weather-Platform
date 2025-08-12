@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCurrentUser } from "aws-amplify/auth/server";
-import { cookies } from "next/headers";
-import { runWithAmplifyServerContext } from "@/lib/amplifyServerConfig";
+import { authenticateMiddleware } from "@/lib/tokenAuth";
 
 export async function middleware(request: NextRequest) {
   // Only protect API routes, not page routes
@@ -10,103 +8,40 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/weather/") ||
     request.nextUrl.pathname.startsWith("/api/iot/")
   ) {
-    // Apply smart authentication for all IoT routes
+    // Apply fast token authentication for all IoT routes
     if (request.nextUrl.pathname.startsWith("/api/iot/")) {
-      try {
-        console.log(
-          "Middleware: Attempting to authenticate IoT request:",
-          request.nextUrl.pathname
-        );
+      const isAuthenticated = await authenticateMiddleware(
+        `Middleware[${request.nextUrl.pathname}]`
+      );
 
-        const user = await runWithAmplifyServerContext({
-          nextServerContext: { cookies },
-          operation: async (contextSpec) => {
-            const currentUser = await getCurrentUser(contextSpec);
-            console.log(
-              "Middleware: IoT auth successful for user:",
-              (currentUser as any)?.userId || (currentUser as any)?.username
-            );
-            return currentUser;
-          },
-        });
-
-        console.log("Middleware: IoT authentication successful, proceeding");
+      if (isAuthenticated) {
         return NextResponse.next();
-      } catch (error: any) {
-        console.log("Middleware: IoT auth failed:", error?.message);
-
-        // Check for Cognito tokens as fallback validation
-        const cookieStore = await cookies();
-        const allCookies = cookieStore.getAll();
-        const hasCognitoTokens = allCookies.some(
-          (cookie) =>
-            cookie.name.includes("CognitoIdentityServiceProvider") &&
-            (cookie.name.includes("accessToken") ||
-              cookie.name.includes("idToken"))
+      } else {
+        console.log("Middleware: Authentication failed - no valid tokens");
+        return NextResponse.json(
+          {
+            error: "Authentication required",
+            details: "No valid authentication tokens found",
+            recoverySuggestion: "Please sign in to access this resource",
+          },
+          { status: 401 }
         );
-
-        console.log("Middleware: Has Cognito tokens:", hasCognitoTokens);
-
-        if (hasCognitoTokens) {
-          console.log(
-            "Middleware: Cognito tokens present but validation failed - allowing for auth sync compatibility"
-          );
-          // If we have tokens but validation failed, it might be a timing/sync issue
-          // Allow the request but let the route handler validate again
-          return NextResponse.next();
-        } else {
-          console.log("Middleware: No authentication tokens found");
-          return NextResponse.json(
-            {
-              error: "Authentication required",
-              details: "No authentication tokens found",
-              recoverySuggestion: "Please sign in to access this resource",
-            },
-            { status: 401 }
-          );
-        }
       }
     }
 
-    // Strict authentication for all other IoT/weather APIs
-    try {
-      console.log(
-        "Middleware: Authenticating request for:",
-        request.nextUrl.pathname
-      );
+    // Apply same fast token authentication for weather APIs
+    const isAuthenticated = await authenticateMiddleware(
+      `Middleware[${request.nextUrl.pathname}]`
+    );
 
-      // Debug: Log available cookies
-      const cookieStore = await cookies();
-      const allCookies = cookieStore.getAll();
-      console.log(
-        "Middleware: Available cookies:",
-        allCookies.map((c: any) => c.name)
-      );
-
-      const user = await runWithAmplifyServerContext({
-        nextServerContext: { cookies },
-        operation: async (contextSpec) => {
-          const currentUser = await getCurrentUser(contextSpec);
-          console.log(
-            "Middleware: Authentication successful for user:",
-            (currentUser as any)?.userId || (currentUser as any)?.username
-          );
-          return currentUser;
-        },
-      });
-
-      console.log("Middleware: Allowing authenticated request to proceed");
-    } catch (error: any) {
-      console.log(
-        "Middleware: Authentication failed for:",
-        request.nextUrl.pathname,
-        "Error:",
-        error?.message
-      );
+    if (isAuthenticated) {
+      return NextResponse.next();
+    } else {
+      console.log("Middleware: Authentication failed - no valid tokens");
       return NextResponse.json(
         {
           error: "Authentication required",
-          details: error?.message || "User not authenticated",
+          details: "No valid authentication tokens found",
           recoverySuggestion: "Please sign in to access this resource",
         },
         { status: 401 }

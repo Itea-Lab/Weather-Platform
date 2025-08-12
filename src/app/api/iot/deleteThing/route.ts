@@ -1,26 +1,17 @@
 import { NextResponse } from "next/server";
-import { authenticateStandard } from "@/lib/amplifyAuth";
+import { authenticateWithTokenOnly } from "@/lib/tokenAuth";
 
 export async function DELETE(request: Request) {
   try {
-    // Use enhanced authentication with retry logic
-    const authResult = await authenticateStandard("delete-device");
-
-    if (!authResult.isAuthenticated) {
-      return NextResponse.json(
-        {
-          error: "Authentication required",
-          details:
-            "No valid authentication tokens found after multiple attempts",
-          recoverySuggestion: "Please sign in to access this resource",
-        },
-        { status: 401 }
-      );
-    }
-
+    // Authentication already validated by middleware - just get user info for logging
+    const authResult = await authenticateWithTokenOnly("delete-device");
     console.log(
-      `Route: Authentication established for delete-device (took ${authResult.attempt} attempts)`
+      `Route: User info for delete-device: ${
+        authResult.user?.username || "token-validated"
+      }`
     );
+
+    // Skip auth check since middleware already validated - always proceed
 
     let requestBody;
     try {
@@ -107,9 +98,10 @@ export async function DELETE(request: Request) {
 
         // If Lambda doesn't exist yet, return a helpful message
         if (
-          fallbackError.name === "ResourceNotFoundException" ||
-          fallbackError.message.includes("Function not found") ||
-          fallbackError.message.includes("does not exist")
+          fallbackError instanceof Error &&
+          (fallbackError.name === "ResourceNotFoundException" ||
+            fallbackError.message.includes("Function not found") ||
+            fallbackError.message.includes("does not exist"))
         ) {
           return NextResponse.json(
             {
@@ -184,12 +176,9 @@ export async function DELETE(request: Request) {
       ...successBody,
       deletedAt: new Date().toISOString(),
       deletedBy:
-        authResult.user?.signInDetails?.loginId ||
-        authResult.user?.attributes?.email ||
+        authResult.user?.email ||
         authResult.user?.username ||
-        (authResult.tokensPresent
-          ? "token-validated-user"
-          : "authenticated-user"),
+        "token-validated-user",
     });
   } catch (error) {
     console.error("Device deletion error:", error);
