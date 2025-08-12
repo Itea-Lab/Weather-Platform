@@ -30,9 +30,7 @@ export async function middleware(request: NextRequest) {
           },
         });
 
-        console.log(
-          "Middleware: IoT authentication successful, proceeding"
-        );
+        console.log("Middleware: IoT authentication successful, proceeding");
         return NextResponse.next();
       } catch (error: any) {
         console.log("Middleware: IoT auth failed:", error?.message);

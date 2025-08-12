@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { authenticateStandard } from "@/lib/amplifyAuth";
 
-export async function POST(request: Request) {
+export async function DELETE(request: Request) {
   try {
     // Use enhanced authentication with retry logic
-    const authResult = await authenticateStandard("register");
+    const authResult = await authenticateStandard("delete-device");
 
     if (!authResult.isAuthenticated) {
       return NextResponse.json(
@@ -20,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     console.log(
-      `Route: Authentication established for register (took ${authResult.attempt} attempts)`
+      `Route: Authentication established for delete-device (took ${authResult.attempt} attempts)`
     );
 
     let requestBody;
@@ -36,7 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { deviceName, thingGroup, connectionType } = requestBody;
+    const { deviceName } = requestBody;
 
     // Validate required fields
     if (!deviceName) {
@@ -46,21 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!thingGroup) {
-      return NextResponse.json(
-        { error: "Thing Group is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!connectionType) {
-      return NextResponse.json(
-        { error: "Connection Type is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate device name format (AWS IoT Thing names have specific requirements)
+    // Validate device name format
     const thingNameRegex = /^[a-zA-Z0-9:_-]+$/;
     if (!thingNameRegex.test(deviceName)) {
       return NextResponse.json(
@@ -73,60 +58,75 @@ export async function POST(request: Request) {
       );
     }
 
-    // Only MQTTS supported for now
-    if (connectionType !== "MQTTS") {
-      return NextResponse.json(
-        {
-          error: "Invalid connection type",
-          details: "Only MQTTS connection type is currently supported",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Call the Lambda function
+    // Call the Lambda function for device deletion
     let lambdaResponse;
 
     try {
-      // Use the new lambda invoker that reads from amplify outputs
-      const { invokeAddThingLambdaServerSide } = await import(
+      // Use the lambda invoker with delete function
+      const { invokeDeleteThingLambdaServerSide } = await import(
         "@/lib/lambdaInvoker"
       );
 
-      lambdaResponse = await invokeAddThingLambdaServerSide({
+      lambdaResponse = await invokeDeleteThingLambdaServerSide({
         thingName: deviceName,
-        thingGroup: thingGroup,
       });
     } catch (lambdaError) {
-      console.warn("Lambda invocation failed:", lambdaError);
+      console.warn(
+        "Delete Lambda invocation failed, using fallback:",
+        lambdaError
+      );
 
       // Fallback to direct Lambda invocation with explicit function name
-      const { getAmplifyFunctionName } = await import("@/lib/lambdaInvoker");
+      const { getAmplifyDeleteFunctionName } = await import(
+        "@/lib/lambdaInvoker"
+      );
       const { createLambdaClient } = await import("@/lib/awsConfig");
 
-      const functionName = await getAmplifyFunctionName();
-      const lambdaClient = await createLambdaClient();
+      try {
+        const functionName = await getAmplifyDeleteFunctionName();
+        const lambdaClient = await createLambdaClient();
 
-      const command = new InvokeCommand({
-        FunctionName: functionName,
-        Payload: JSON.stringify({
-          thingName: deviceName,
-          thingGroup: thingGroup,
-        }),
-      });
+        const { InvokeCommand } = await import("@aws-sdk/client-lambda");
+        const command = new InvokeCommand({
+          FunctionName: functionName,
+          Payload: JSON.stringify({
+            thingName: deviceName,
+          }),
+        });
 
-      const result = await lambdaClient.send(command);
+        const result = await lambdaClient.send(command);
 
-      if (!result.Payload) {
-        throw new Error("No response from Lambda function");
+        if (!result.Payload) {
+          throw new Error("No response from Lambda function");
+        }
+
+        const responseString = new TextDecoder().decode(result.Payload);
+        lambdaResponse = JSON.parse(responseString);
+      } catch (fallbackError) {
+        console.error("Fallback Lambda invocation also failed:", fallbackError);
+
+        // If Lambda doesn't exist yet, return a helpful message
+        if (
+          fallbackError.name === "ResourceNotFoundException" ||
+          fallbackError.message.includes("Function not found") ||
+          fallbackError.message.includes("does not exist")
+        ) {
+          return NextResponse.json(
+            {
+              error: "Delete function not deployed",
+              details:
+                "The delete Lambda function hasn't been deployed yet. Please run 'npx ampx pipeline-deploy --branch dev' to deploy the delete functionality.",
+              suggestedAction: "Deploy the delete Lambda function first",
+            },
+            { status: 503 } // Service Unavailable
+          );
+        }
+
+        throw fallbackError;
       }
-
-      const responseString = new TextDecoder().decode(result.Payload);
-      lambdaResponse = JSON.parse(responseString);
     }
 
     // Process Lambda response
-    // Check if Lambda function returned an error
     if (!lambdaResponse || lambdaResponse.statusCode !== 200) {
       const errorBody =
         lambdaResponse && lambdaResponse.body
@@ -139,21 +139,15 @@ export async function POST(request: Request) {
       let status = 500;
       let errorMessage = errorBody.error || "Lambda function failed";
 
-      // Handle specific Lambda error cases
-      if (
-        errorMessage.includes("already exists") ||
-        errorMessage.includes("ResourceAlreadyExistsException")
-      ) {
-        status = 409; // Conflict
-        errorMessage = `Device '${deviceName}' already exists. Please use a different name.`;
+      if (errorMessage.includes("ResourceNotFoundException")) {
+        status = 404; // Not Found
+        errorMessage = `Device '${deviceName}' not found or already deleted.`;
       } else if (
         errorMessage.includes("permission") ||
         errorMessage.includes("AccessDeniedException") ||
         errorMessage.includes("not authorized")
       ) {
         status = 403; // Forbidden
-      } else if (errorMessage.includes("ResourceNotFoundException")) {
-        status = 404; // Not Found
       } else if (
         errorMessage.includes("validation") ||
         errorMessage.includes("ValidationException") ||
@@ -173,7 +167,7 @@ export async function POST(request: Request) {
           details:
             errorBody.details ||
             errorBody.message ||
-            "Error processing device registration",
+            "Error processing device deletion",
         },
         { status: status }
       );
@@ -188,8 +182,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       ...successBody,
-      registeredAt: new Date().toISOString(),
-      registeredBy:
+      deletedAt: new Date().toISOString(),
+      deletedBy:
         authResult.user?.signInDetails?.loginId ||
         authResult.user?.attributes?.email ||
         authResult.user?.username ||
@@ -198,21 +192,25 @@ export async function POST(request: Request) {
           : "authenticated-user"),
     });
   } catch (error) {
-    console.error("Device registration error:", error);
+    console.error("Device deletion error:", error);
     if (error instanceof Error) {
-      const errorMessage = error.message || "Failed to register device";
+      const errorMessage = error.message || "Failed to delete device";
 
-      // Try to determine error type from the message
       let status = 500;
       if (errorMessage.includes("parse") || errorMessage.includes("JSON")) {
         status = 400; // Bad Request - parsing error
-      } else if (errorMessage.includes("device already exists")) {
-        status = 409; // Conflict - duplicate resource
+      } else if (errorMessage.includes("device not found")) {
+        status = 404; // Not Found
+      } else if (
+        errorMessage.includes("not authorized") ||
+        errorMessage.includes("AccessDenied")
+      ) {
+        status = 403; // Forbidden
       }
 
       return NextResponse.json(
         {
-          error: "Failed to register device",
+          error: "Failed to delete device",
           details: errorMessage,
           stack:
             process.env.NODE_ENV === "development" ? error.stack : undefined,
@@ -221,7 +219,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.json(
-      { error: "Failed to register device", details: String(error) },
+      { error: "Failed to delete device", details: String(error) },
       { status: 500 }
     );
   }

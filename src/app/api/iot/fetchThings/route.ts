@@ -1,55 +1,26 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "aws-amplify/auth/server";
-import { cookies } from "next/headers";
-import { runWithAmplifyServerContext } from "@/lib/amplifyServerConfig";
+import { authenticateQuick } from "@/lib/amplifyAuth";
 import { createLambdaClient } from "@/lib/awsConfig";
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 export async function GET() {
   try {
-    // Attempt to get authenticated user - still required for security
-    let user = null;
-    let isAuthenticated = false;
+    // Use quick authentication for background device fetching
+    const authResult = await authenticateQuick("fetchThings");
 
-    try {
-      user = await runWithAmplifyServerContext({
-        nextServerContext: { cookies },
-        operation: async (contextSpec) => {
-          return await getCurrentUser(contextSpec);
+    if (!authResult.isAuthenticated) {
+      return NextResponse.json(
+        {
+          error: "Authentication required",
+          details: "No valid authentication tokens found",
         },
-      });
-      isAuthenticated = true;
-      console.log("Route: Authentication successful for fetchThings");
-    } catch (authError) {
-      console.warn("Route: Authentication failed for fetchThings:", authError);
-
-      // Check if we have Cognito cookies as a fallback validation
-      const cookieStore = await cookies();
-      const allCookies = cookieStore.getAll();
-      const hasCognitoTokens = allCookies.some(
-        (cookie) =>
-          cookie.name.includes("CognitoIdentityServiceProvider") &&
-          (cookie.name.includes("accessToken") ||
-            cookie.name.includes("idToken"))
+        { status: 401 }
       );
-
-      if (!hasCognitoTokens) {
-        // No tokens at all - definitely not authenticated
-        return NextResponse.json(
-          {
-            error: "Authentication required",
-            details: "No authentication tokens found",
-            recoverySuggestion: "Please sign in to access this resource",
-          },
-          { status: 401 }
-        );
-      }
-
-      console.log(
-        "Route: Cognito tokens present but validation failed - proceeding with caution"
-      );
-      // Continue but mark as unauthenticated for logging purposes
     }
+
+    console.log(
+      `Route: Authentication established for fetchThings (took ${authResult.attempt} attempts)`
+    );
 
     // Get function name from amplify outputs
     let functionName: string;
@@ -112,10 +83,12 @@ export async function GET() {
       ...successBody,
       fetchedAt: new Date().toISOString(),
       fetchedBy:
-        (user as any)?.signInDetails?.loginId ||
-        (user as any)?.attributes?.email ||
-        (user as any)?.username ||
-        (isAuthenticated ? "unknown-user" : "token-validation-failed"),
+        authResult.user?.signInDetails?.loginId ||
+        authResult.user?.attributes?.email ||
+        authResult.user?.username ||
+        (authResult.tokensPresent
+          ? "token-validated-user"
+          : "authenticated-user"),
     });
   } catch (error) {
     console.error("Device fetch error:", error);

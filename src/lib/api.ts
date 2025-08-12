@@ -189,6 +189,45 @@ export async function registerDevice(
   }
 }
 
+export async function deleteDevice(
+  deviceName: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch("/api/iot/deleteThing", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ deviceName }),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: response.statusText,
+        details: `HTTP ${response.status} error occurred`,
+      }));
+
+      // Throw an error with more detailed information
+      throw new Error(
+        errorData.error ||
+          (errorData.details
+            ? `${response.statusText}: ${errorData.details}`
+            : "Failed to delete device")
+      );
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      message: result.message || `Device ${deviceName} deleted successfully`,
+    };
+  } catch (error) {
+    console.error("Error deleting device:", error);
+    throw error;
+  }
+}
+
 // Hook to fetch devices from AWS IoT Core
 export function useDevices() {
   const { data, error, isLoading, mutate } = useSWR<DeviceListResponse>(

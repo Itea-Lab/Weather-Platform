@@ -3,15 +3,18 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { auth } from "./auth/resource";
 import { addThing } from "./functions/addThing/resource";
 import { fetchThings } from "./functions/fetchThings/resource";
+import { deleteThing } from "./functions/deleteThing/resource";
 
 export const backend = defineBackend({
   auth,
   addThing,
   fetchThings,
+  deleteThing,
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
 const fetchThingsLambda = backend.fetchThings.resources.lambda;
+const deleteThingLambda = backend.deleteThing.resources.lambda;
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
@@ -53,6 +56,27 @@ const fetchThingsIoTPolicyStatement = new iam.PolicyStatement({
   ],
 });
 
+// IoT permissions for the deleteThing Lambda function
+const deleteThingsIoTPolicyStatement = new iam.PolicyStatement({
+  sid: "AllowDeleteThingsIoTActions",
+  actions: [
+    "iot:DeleteThing",
+    "iot:RemoveThingFromThingGroup",
+    "iot:DetachThingPrincipal",
+    "iot:DetachPolicy",
+    "iot:ListThingPrincipals",
+    "iot:DeleteCertificate",
+    "iot:UpdateCertificate",
+    "iot:DescribeThing",
+  ],
+  resources: [
+    `arn:aws:iot:${region}:${accountId}:thing/*`,
+    `arn:aws:iot:${region}:${accountId}:thinggroup/ITeaWeatherHub`,
+    `arn:aws:iot:${region}:${accountId}:policy/WeatherStationPolicies`,
+    `arn:aws:iot:${region}:${accountId}:cert/*`,
+  ],
+});
+
 // STS permissions for both Lambda functions
 const stsPolicyStatement = new iam.PolicyStatement({
   sid: "AllowSTSAccess",
@@ -68,14 +92,22 @@ addThingLambda.addToRolePolicy(stsPolicyStatement);
 fetchThingsLambda.addToRolePolicy(fetchThingsIoTPolicyStatement);
 fetchThingsLambda.addToRolePolicy(stsPolicyStatement);
 
-// Grant authenticated users permission to invoke both Lambda functions
+// Apply permissions to deleteThing Lambda
+deleteThingLambda.addToRolePolicy(deleteThingsIoTPolicyStatement);
+deleteThingLambda.addToRolePolicy(stsPolicyStatement);
+
+// Grant authenticated users permission to invoke all Lambda functions
 const authenticatedRole = backend.auth.resources.authenticatedUserIamRole;
 authenticatedRole.addToPrincipalPolicy(
   new iam.PolicyStatement({
     sid: "AllowLambdaInvoke",
     effect: iam.Effect.ALLOW,
     actions: ["lambda:InvokeFunction"],
-    resources: [addThingLambda.functionArn, fetchThingsLambda.functionArn],
+    resources: [
+      addThingLambda.functionArn,
+      fetchThingsLambda.functionArn,
+      deleteThingLambda.functionArn,
+    ],
   })
 );
 
@@ -85,5 +117,7 @@ backend.addOutput({
     addThingFunctionArn: addThingLambda.functionArn,
     fetchThingsFunctionName: fetchThingsLambda.functionName,
     fetchThingsFunctionArn: fetchThingsLambda.functionArn,
+    deleteThingFunctionName: deleteThingLambda.functionName,
+    deleteThingFunctionArn: deleteThingLambda.functionArn,
   },
 });
