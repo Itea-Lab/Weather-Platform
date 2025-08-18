@@ -1,6 +1,6 @@
 "use client";
 
-import { useLatestWeatherData } from "@/lib/api";
+import { useRealtimeWeatherData } from "@/hooks/useRealtimeWeatherData";
 import { format } from "date-fns";
 import { cardData } from "@/types/sensorData";
 import {
@@ -10,6 +10,8 @@ import {
   ChartNoAxesCombined,
   Wind,
   Compass,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 interface WeatherCardProps {
@@ -25,7 +27,7 @@ export default function WeatherCard({
   unit,
   icon,
 }: WeatherCardProps) {
-  const { data, error, isLoading } = useLatestWeatherData();
+  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
 
   const getIcon = () => {
     switch (icon) {
@@ -52,8 +54,7 @@ export default function WeatherCard({
         </div>
       );
     if (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : String(error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
       return <span className="ml-2 text-xs text-red-400">({errorMsg})</span>;
     }
     if (!data) return "N/A";
@@ -91,10 +92,24 @@ export default function WeatherCard({
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            {/* Connection status indicator */}
+            {isConnected ? (
+              <div title="Real-time connected">
+                <Wifi className="w-4 h-4 text-green-500" />
+              </div>
+            ) : (
+              <div title="Disconnected">
+                <WifiOff className="w-4 h-4 text-red-500" />
+              </div>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
-            Last update: {getUpdateTime()}
+            {isConnected
+              ? `Last update: ${getUpdateTime()}`
+              : "Waiting for connection..."}
           </p>
           {error && getErrorMessage()}
         </div>
@@ -103,6 +118,12 @@ export default function WeatherCard({
       <div className="mt-2 text-3xl font-semibold text-gray-900">
         {getValue()}
       </div>
+      {isConnected && !isLoading && (
+        <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          Online
+        </div>
+      )}
     </div>
   );
 }

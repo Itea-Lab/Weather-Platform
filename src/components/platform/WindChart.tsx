@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useWindData } from "@/lib/api";
+import { useRealtimeWindData } from "@/hooks/useRealtimeChartData";
 import {
   LineChart,
   XAxis,
@@ -14,9 +13,8 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 
-export default function LatestWindChart() {
-  const [timeRange, setTimeRange] = useState("-1h");
-  const { windData, error, isLoading } = useWindData(timeRange);
+export default function WindChart() {
+  const { windData, error, isLoading } = useRealtimeWindData();
 
   const formatDate = (dateString: string) => {
     try {
@@ -25,10 +23,6 @@ export default function LatestWindChart() {
     } catch {
       return dateString;
     }
-  };
-
-  const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTimeRange(e.target.value);
   };
 
   if (isLoading) {
@@ -61,22 +55,14 @@ export default function LatestWindChart() {
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Wind Speed</h2>
+        <h2 className="text-lg font-semibold">Wind Speed (Real-time)</h2>
         <div className="flex items-center space-x-2">
-          <label htmlFor="timeRange" className="text-sm text-gray-500">
-            Time Range:
-          </label>
-          <select
-            id="timeRange"
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            className="text-sm border rounded px-2 py-1"
-          >
-            <option value="-1h">Last Hour</option>
-            <option value="-6h">Last 6 Hours</option>
-            <option value="-12h">Last 12 Hours</option>
-            <option value="-24h">Last 24 Hours</option>
-          </select>
+          <span className="text-sm text-gray-500">
+            Live data from IoT sensors
+          </span>
+          {!isLoading && windData.length > 0 && (
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          )}
         </div>
       </div>
 

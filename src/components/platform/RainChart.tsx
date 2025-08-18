@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRainData } from "@/lib/api";
+import { useRealtimeRainData } from "@/hooks/useRealtimeChartData";
 import {
   BarChart,
   Bar,
@@ -15,8 +14,7 @@ import {
 import { format, parseISO } from "date-fns";
 
 export default function RainChart() {
-  const [timeRange, setTimeRange] = useState("-1h");
-  const { rainData, error, isLoading } = useRainData(timeRange);
+  const { rainData, error, isLoading } = useRealtimeRainData();
 
   const formatDate = (dateString: string) => {
     try {
@@ -25,10 +23,6 @@ export default function RainChart() {
     } catch {
       return dateString;
     }
-  };
-
-  const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTimeRange(e.target.value);
   };
 
   if (isLoading) {
@@ -61,22 +55,14 @@ export default function RainChart() {
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Rainfall Data</h2>
+        <h2 className="text-lg font-semibold">Rainfall Data (Real-time)</h2>
         <div className="flex items-center space-x-2">
-          <label htmlFor="rainTimeRange" className="text-sm text-gray-500">
-            Time Range:
-          </label>
-          <select
-            id="rainTimeRange"
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            className="text-sm border rounded px-2 py-1"
-          >
-            <option value="-1h">Last Hour</option>
-            <option value="-6h">Last 6 Hours</option>
-            <option value="-12h">Last 12 Hours</option>
-            <option value="-24h">Last 24 Hours</option>
-          </select>
+          <span className="text-sm text-gray-500">
+            Live data from IoT sensors
+          </span>
+          {!isLoading && rainData.length > 0 && (
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          )}
         </div>
       </div>
 

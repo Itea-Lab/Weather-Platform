@@ -277,7 +277,7 @@ export default function AddDeviceButton() {
                     <SelectValue placeholder="Select connection type" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border shadow-md">
-                    <SelectItem value="MQTTS">MQTTS</SelectItem>
+                    <SelectItem value="MQTTS">MQTTS (Secure MQTT)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

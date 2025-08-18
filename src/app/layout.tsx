@@ -6,6 +6,7 @@ import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/AuthContext";
+import PubSubInitializer from "@/components/PubSubInitializer";
 import { useEffect } from "react";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <PubSubInitializer />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

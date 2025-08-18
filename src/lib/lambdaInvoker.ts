@@ -98,3 +98,45 @@ export async function invokeDeleteThingLambdaServerSide(payload: {
     throw error;
   }
 }
+
+// Generic Lambda invoker function
+export async function invokeLambda(functionNameKey: string, payload: any) {
+  try {
+    // Get pre-configured Lambda client with correct region
+    const lambdaClient = await createLambdaClient();
+
+    // Get the actual function name from amplify outputs
+    const amplifyOutputs = await import("../../amplify_outputs.json");
+    const customOutputs = (amplifyOutputs as any).custom;
+    const functionName = customOutputs?.[functionNameKey];
+
+    if (!functionName) {
+      throw new Error(`Function name not found for key: ${functionNameKey}`);
+    }
+
+    const command = new InvokeCommand({
+      FunctionName: functionName,
+      Payload: JSON.stringify(payload),
+    });
+
+    const result = await lambdaClient.send(command);
+
+    if (!result.Payload) {
+      throw new Error("No response from Lambda function");
+    }
+
+    const responseString = new TextDecoder().decode(result.Payload);
+    const lambdaResponse = JSON.parse(responseString);
+
+    // Handle Lambda response format
+    if (lambdaResponse.statusCode === 200) {
+      return JSON.parse(lambdaResponse.body);
+    } else {
+      const errorResponse = JSON.parse(lambdaResponse.body);
+      throw new Error(errorResponse.error || "Lambda function error");
+    }
+  } catch (error) {
+    console.error("Lambda invocation error:", error);
+    throw error;
+  }
+}

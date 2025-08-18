@@ -190,7 +190,7 @@ export async function registerDevice(
 }
 
 export async function deleteDevice(
-  deviceName: string
+  thingName: string
 ): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch("/api/iot/deleteThing", {
@@ -198,33 +198,28 @@ export async function deleteDevice(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ deviceName }),
+      body: JSON.stringify({
+        deviceName: thingName,
+      }),
       credentials: "include",
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: response.statusText,
-        details: `HTTP ${response.status} error occurred`,
-      }));
-
-      // Throw an error with more detailed information
-      throw new Error(
-        errorData.error ||
-          (errorData.details
-            ? `${response.statusText}: ${errorData.details}`
-            : "Failed to delete device")
-      );
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Deletion failed");
     }
 
-    const result = await response.json();
+    const data = await response.json();
     return {
       success: true,
-      message: result.message || `Device ${deviceName} deleted successfully`,
+      message: data.message,
     };
   } catch (error) {
-    console.error("Error deleting device:", error);
-    throw error;
+    console.error("Device deletion error:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Deletion failed",
+    };
   }
 }
 

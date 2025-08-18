@@ -4,17 +4,20 @@ import { auth } from "./auth/resource";
 import { addThing } from "./functions/addThing/resource";
 import { fetchThings } from "./functions/fetchThings/resource";
 import { deleteThing } from "./functions/deleteThing/resource";
+import { getIoTEndpoint } from "./functions/getIoTEndpoint/resource";
 
 export const backend = defineBackend({
   auth,
   addThing,
   fetchThings,
   deleteThing,
+  getIoTEndpoint,
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
 const fetchThingsLambda = backend.fetchThings.resources.lambda;
 const deleteThingLambda = backend.deleteThing.resources.lambda;
+const getIoTEndpointLambda = backend.getIoTEndpoint.resources.lambda;
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
@@ -96,6 +99,15 @@ fetchThingsLambda.addToRolePolicy(stsPolicyStatement);
 deleteThingLambda.addToRolePolicy(deleteThingsIoTPolicyStatement);
 deleteThingLambda.addToRolePolicy(stsPolicyStatement);
 
+// Apply permissions to getIoTEndpoint Lambda
+const getIoTEndpointPolicyStatement = new iam.PolicyStatement({
+  sid: "AllowGetIoTEndpoint",
+  actions: ["iot:DescribeEndpoint"],
+  resources: ["*"], // DescribeEndpoint requires wildcard resource
+});
+getIoTEndpointLambda.addToRolePolicy(getIoTEndpointPolicyStatement);
+getIoTEndpointLambda.addToRolePolicy(stsPolicyStatement);
+
 // Grant authenticated users permission to invoke all Lambda functions
 const authenticatedRole = backend.auth.resources.authenticatedUserIamRole;
 authenticatedRole.addToPrincipalPolicy(
@@ -107,8 +119,17 @@ authenticatedRole.addToPrincipalPolicy(
       addThingLambda.functionArn,
       fetchThingsLambda.functionArn,
       deleteThingLambda.functionArn,
+      getIoTEndpointLambda.functionArn,
     ],
   })
+);
+
+// Add AWS managed policies for IoT PubSub access
+backend.auth.resources.authenticatedUserIamRole.addManagedPolicy(
+  iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTDataAccess")
+);
+backend.auth.resources.authenticatedUserIamRole.addManagedPolicy(
+  iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTConfigAccess")
 );
 
 backend.addOutput({
@@ -119,5 +140,7 @@ backend.addOutput({
     fetchThingsFunctionArn: fetchThingsLambda.functionArn,
     deleteThingFunctionName: deleteThingLambda.functionName,
     deleteThingFunctionArn: deleteThingLambda.functionArn,
+    getIoTEndpointFunctionName: getIoTEndpointLambda.functionName,
+    getIoTEndpointFunctionArn: getIoTEndpointLambda.functionArn,
   },
 });

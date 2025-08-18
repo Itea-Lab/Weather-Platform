@@ -77,8 +77,7 @@ function DeleteConfirmDialog({
 }
 
 export default function DeviceTable() {
-  const { devices, totalCount, thingGroup, error, isLoading, mutate } =
-    useDevices();
+  const { devices, isLoading, error, mutate } = useDevices();
   const [groupFilter, setGroupFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -133,7 +132,9 @@ export default function DeviceTable() {
           <AlertCircle className="h-5 w-5" />
           <div>
             <h3 className="font-medium">Failed to load devices</h3>
-            <p className="text-sm text-red-500">{error.message}</p>
+            <p className="text-sm text-red-500">
+              {error?.message || "Failed to load devices"}
+            </p>
           </div>
         </div>
       </div>
@@ -161,7 +162,7 @@ export default function DeviceTable() {
               <p className="text-sm text-gray-500 mt-1">
                 {isLoading
                   ? "Loading..."
-                  : `${filteredDevices.length} of ${totalCount} devices in ${thingGroup}`}
+                  : `${filteredDevices.length} devices total`}
               </p>
             </div>
             <DeviceFilter

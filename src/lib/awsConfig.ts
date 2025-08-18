@@ -1,10 +1,14 @@
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import { LambdaClient } from "@aws-sdk/client-lambda";
-import { IoTClient } from "@aws-sdk/client-iot";
+import { IoTClient, DescribeEndpointCommand } from "@aws-sdk/client-iot";
 
 // Cache for AWS region to avoid multiple STS calls
 let cachedRegion: string | null = null;
 let regionPromise: Promise<string> | null = null;
+
+// Cache for IoT endpoint to avoid multiple API calls
+let cachedIoTEndpoint: string | null = null;
+let iotEndpointPromise: Promise<string> | null = null;
 
 /**
  * Get current AWS region using STS client configuration
@@ -128,6 +132,79 @@ export async function createIoTClient(): Promise<IoTClient> {
 export async function createSTSClient(): Promise<STSClient> {
   const region = await getAWSRegion();
   return new STSClient({ region });
+}
+
+/**
+ * Get AWS IoT Core endpoint for the current account
+ * Uses cached result to avoid multiple API calls
+ * This function mirrors what the Lambda functions do
+ * @returns Promise<string> - IoT Core endpoint (e.g., 'xxxxx-ats.iot.us-east-1.amazonaws.com')
+ */
+export async function getIoTCoreEndpoint(): Promise<string> {
+  // Return cached endpoint if available
+  if (cachedIoTEndpoint) {
+    return cachedIoTEndpoint;
+  }
+
+  // Return existing promise if endpoint detection is in progress
+  if (iotEndpointPromise) {
+    return iotEndpointPromise;
+  }
+
+  iotEndpointPromise = detectIoTEndpoint();
+
+  try {
+    cachedIoTEndpoint = await iotEndpointPromise;
+    return cachedIoTEndpoint;
+  } catch (error) {
+    // Reset promise on error so it can be retried
+    iotEndpointPromise = null;
+    throw error;
+  }
+}
+
+/**
+ * Internal function to detect IoT Core endpoint
+ * This uses the same approach as the Lambda functions
+ */
+async function detectIoTEndpoint(): Promise<string> {
+  try {
+    const region = await getAWSRegion();
+    console.log("Detecting IoT Core endpoint...");
+
+    const iotClient = new IoTClient({ region });
+    const endpointResponse = await iotClient.send(
+      new DescribeEndpointCommand({
+        endpointType: "iot:Data-ATS", // ATS endpoint for device connections
+      })
+    );
+
+    if (!endpointResponse.endpointAddress) {
+      throw new Error("Could not retrieve IoT Core endpoint address");
+    }
+    
+    return endpointResponse.endpointAddress;
+  } catch (error) {
+    console.error("Failed to detect IoT Core endpoint:", error);
+    throw new Error("Could not determine IoT Core endpoint");
+  }
+}
+
+/**
+ * Clear cached IoT endpoint (useful for testing or when configuration changes)
+ */
+export function clearIoTEndpointCache(): void {
+  cachedIoTEndpoint = null;
+  iotEndpointPromise = null;
+  console.log("IoT endpoint cache cleared");
+}
+
+/**
+ * Check if IoT endpoint is cached
+ * @returns boolean - true if endpoint is already cached
+ */
+export function isIoTEndpointCached(): boolean {
+  return cachedIoTEndpoint !== null;
 }
 
 /**

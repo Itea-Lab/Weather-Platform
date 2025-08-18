@@ -1,3 +1,4 @@
+.vscode
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 .amazonq
 # dependencies
@@ -61,3 +62,4 @@ cdk.context.json
 /amplify/mock-api-resources/
 # Lambda function policies
 custom-policies.json
+
