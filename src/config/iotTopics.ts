@@ -24,11 +24,10 @@ export const IOT_TOPICS = {
 } as const;
 
 // ===== ACTIVE TOPIC SELECTION =====
-// Dashboard subscribes to specific district5 topic
+// NOTE: Topic selection is now handled dynamically via TopicContext
 // Devices publish to: weatherPlatform/telemetry/district5, weatherPlatform/telemetry/district6, etc.
 // IoT Core can observe all with: weatherPlatform/telemetry/+
-// Dashboard subscribes to specific district: weatherPlatform/telemetry/district5
-export const ACTIVE_WEATHER_TOPIC = IOT_TOPICS.DISTRICT_5;
+// Dashboard subscribes to user-selected district via TopicSelector component
 
 // ===== DATA PARSING CONFIGURATION =====
 export const DATA_CONFIG = {
@@ -57,14 +56,6 @@ export const DEBUG_CONFIG = {
 } as const;
 
 // ===== EXPORT FUNCTIONS =====
-
-/**
- * Get the currently active weather topic
- * This is what the dashboard will subscribe to
- */
-export function getActiveWeatherTopic(): string {
-  return ACTIVE_WEATHER_TOPIC;
-}
 
 /**
  * Get all available topic configurations

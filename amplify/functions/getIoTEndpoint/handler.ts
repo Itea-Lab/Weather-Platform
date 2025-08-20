@@ -19,7 +19,7 @@ export const handler = async (event: any) => {
     }
 
     const endpoint = endpointResponse.endpointAddress;
-    console.log(`✅ Retrieved IoT Core endpoint: ${endpoint}`);
+    console.log(`Retrieved IoT Core endpoint: ${endpoint}`);
 
     return {
       statusCode: 200,

@@ -55,7 +55,7 @@ export default function WindChart() {
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Wind Speed (Real-time)</h2>
+        <h2 className="text-lg font-semibold">Wind Speed Live Data</h2>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500">
             Live data from IoT sensors

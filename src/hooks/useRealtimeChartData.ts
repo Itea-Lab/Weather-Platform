@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PubSub } from "@aws-amplify/pubsub";
 import { WindData, RainData } from "@/types/sensorData";
 import { getIoTConfig, getWeatherTopic } from "@/lib/iotConfig";
+import { useTopicContext } from "@/hooks/TopicContext";
 
 interface WeatherMessage {
   deviceId: string;
@@ -20,6 +21,7 @@ interface WeatherMessage {
 }
 
 export function useRealtimeWindData() {
+  const { selectedTopic } = useTopicContext();
   const [windData, setWindData] = useState<WindData[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,9 +44,9 @@ export function useRealtimeWindData() {
         setError(null);
         setIsLoading(true);
 
-        // Get dynamic IoT configuration
-        const iotConfig = await getIoTConfig();
-        const topic = getWeatherTopic();
+        // Get dynamic IoT configuration with selected topic
+        const iotConfig = await getIoTConfig(selectedTopic);
+        const topic = getWeatherTopic(selectedTopic);
 
         // Create PubSub client
         const pubSubClient = new PubSub({
@@ -61,25 +63,23 @@ export function useRealtimeWindData() {
               const newWindData = transformWindMessage(messageData);
               setWindData((prev) => {
                 const updated = [...prev, newWindData].slice(-20); // Keep last 20 points
-                console.log("Wind data updated:", updated.length, "points");
                 return updated;
               });
               setError(null);
             } catch (parseError) {
-              console.error("❌ Error parsing wind data:", parseError);
+              console.error("Error parsing wind data:", parseError);
               setError(new Error("Failed to parse wind data"));
             }
           },
           error: (err: any) => {
-            console.error("❌ Wind data subscription error:", err);
+            console.error("Wind data subscription error:", err);
             setError(new Error(`Wind data connection error: ${err.message}`));
           },
         });
 
         setIsLoading(false);
-        // Wind data subscription ready
       } catch (err) {
-        console.error("❌ Failed to setup wind data subscription:", err);
+        console.error("Failed to setup wind data subscription:", err);
         setError(new Error("Failed to connect to wind data stream"));
         setIsLoading(false);
       }
@@ -92,7 +92,7 @@ export function useRealtimeWindData() {
         subscription.unsubscribe();
       }
     };
-  }, [transformWindMessage]);
+  }, [transformWindMessage, selectedTopic]); // Re-run when topic changes
 
   // Function to manually add wind data (called from main weather hook)
   const addWindData = useCallback(
@@ -116,6 +116,7 @@ export function useRealtimeWindData() {
 }
 
 export function useRealtimeRainData() {
+  const { selectedTopic } = useTopicContext();
   const [rainData, setRainData] = useState<RainData[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,9 +138,15 @@ export function useRealtimeRainData() {
         setError(null);
         setIsLoading(true);
 
-        // Get dynamic IoT configuration
-        const iotConfig = await getIoTConfig();
-        const topic = getWeatherTopic();
+        // DEBUG: Log rain data topic switching
+        console.log(
+          "Setting up rain data subscription for topic:",
+          selectedTopic
+        );
+
+        // Get dynamic IoT configuration with selected topic
+        const iotConfig = await getIoTConfig(selectedTopic);
+        const topic = getWeatherTopic(selectedTopic);
 
         // Create PubSub client
         const pubSubClient = new PubSub({
@@ -156,25 +163,23 @@ export function useRealtimeRainData() {
               const newRainData = transformRainMessage(messageData);
               setRainData((prev) => {
                 const updated = [...prev, newRainData].slice(-24); // Keep last 24 hours
-                console.log("Rain data updated:", updated.length, "points");
                 return updated;
               });
               setError(null);
             } catch (parseError) {
-              console.error("❌ Error parsing rain data:", parseError);
+              console.error("Error parsing rain data:", parseError);
               setError(new Error("Failed to parse rain data"));
             }
           },
           error: (err: any) => {
-            console.error("❌ Rain data subscription error:", err);
+            console.error("Rain data subscription error:", err);
             setError(new Error(`Rain data connection error: ${err.message}`));
           },
         });
 
         setIsLoading(false);
-        // Rain data subscription ready
       } catch (err) {
-        console.error("❌ Failed to setup rain data subscription:", err);
+        console.error("Failed to setup rain data subscription:", err);
         setError(new Error("Failed to connect to rain data stream"));
         setIsLoading(false);
       }
@@ -187,7 +192,7 @@ export function useRealtimeRainData() {
         subscription.unsubscribe();
       }
     };
-  }, [transformRainMessage]);
+  }, [transformRainMessage, selectedTopic]); // Re-run when topic changes
 
   // Function to manually add rain data (called from main weather hook)
   const addRainData = useCallback(
@@ -195,7 +200,6 @@ export function useRealtimeRainData() {
       const newRainData = transformRainMessage(weatherMessage);
       setRainData((prev) => {
         const updated = [...prev, newRainData].slice(-24); // Keep last 24 hours
-        console.log("Rain data updated:", updated.length, "points");
         return updated;
       });
     },

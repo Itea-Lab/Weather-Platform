@@ -1,5 +1,4 @@
 import { fetchAuthSession } from "aws-amplify/auth";
-import { getActiveWeatherTopic } from "@/config/iotTopics";
 
 // Cache for IoT endpoint to prevent multiple API calls
 let cachedEndpoint: string | null = null;
@@ -96,31 +95,68 @@ export function clearIoTEndpointCache(): void {
   cachedEndpoint = null;
   cacheTimestamp = 0;
   pendingRequest = null; // Also clear any pending requests
+  console.log("IoT endpoint cache cleared");
+}
+
+/**
+ * Force clear all caches and reset connection state
+ */
+export function clearAllIoTCache(): void {
+  clearIoTEndpointCache();
+
+  // Clear browser storage that might affect IoT connections
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem("aws-amplify-cache");
+      sessionStorage.removeItem("aws-amplify-federatedInfo");
+      localStorage.removeItem("aws-amplify-cache");
+      console.log("AWS Amplify caches cleared");
+    } catch (e) {
+      console.warn("Could not clear some cache items:", e);
+    }
+  }
 }
 
 /**
  * Get IoT configuration for PubSub
  */
-export async function getIoTConfig() {
+export async function getIoTConfig(customTopic?: string) {
   try {
     const { region } = await getAWSCredentials();
     const endpoint = await getIoTEndpoint();
+    const finalTopic = customTopic; // Use ONLY the custom topic, no fallback
+
+    // ERROR: If no custom topic provided, this is a bug
+    if (!finalTopic) {
+      throw new Error(
+        "No topic provided to getIoTConfig - this is a bug in the topic selection system"
+      );
+    }
 
     return {
       endpoint: `wss://${endpoint}/mqtt`,
       region,
-      topic: getActiveWeatherTopic(), // Use configurable topic
+      topic: finalTopic,
     };
   } catch (error) {
-    console.error("❌ Failed to get IoT configuration:", error);
+    console.error("Failed to get IoT configuration:", error);
     throw error;
   }
 }
 
 /**
  * Get the topic to subscribe to for weather data
- * This uses the configuration from iotTopics.ts
+ * This uses the configuration from iotTopics.ts or a custom topic
  */
-export function getWeatherTopic(): string {
-  return getActiveWeatherTopic();
+export function getWeatherTopic(customTopic?: string): string {
+  const finalTopic = customTopic; // Use ONLY the custom topic, no fallback
+
+  // ERROR: If no custom topic provided, this is a bug
+  if (!finalTopic) {
+    throw new Error(
+      "No topic provided to getWeatherTopic - this is a bug in the topic selection system"
+    );
+  }
+
+  return finalTopic;
 }

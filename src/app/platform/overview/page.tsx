@@ -1,16 +1,21 @@
+"use client";
+
 import WeatherCard from "@/components/platform/DataCard";
 import WindChart from "@/components/platform/WindChart";
 import RainChart from "@/components/platform/RainChart";
-
-export const metadata = {
-  title: "Overview",
-  description: "Weather station overview dashboard",
-};
+import TopicSelector from "@/components/platform/TopicSelector";
+import { useRealtimeWeatherData } from "@/hooks/useRealtimeWeatherData";
 
 export default function OverviewPage() {
+  // Single hook call for all weather cards
+  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Weather Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Weather Dashboard</h1>
+        <TopicSelector />
+      </div>
 
       <section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -19,18 +24,30 @@ export default function OverviewPage() {
             dataKey="temperature"
             unit="°C"
             icon="temperature"
+            data={data}
+            error={error}
+            isLoading={isLoading}
+            isConnected={isConnected}
           />
           <WeatherCard
             title="Humidity"
             dataKey="humidity"
             unit="%"
             icon="humidity"
+            data={data}
+            error={error}
+            isLoading={isLoading}
+            isConnected={isConnected}
           />
           <WeatherCard
             title="Pressure"
             dataKey="pressure"
             unit=" hPa"
             icon="barometric"
+            data={data}
+            error={error}
+            isLoading={isLoading}
+            isConnected={isConnected}
           />
         </div>
       </section>
@@ -43,18 +60,30 @@ export default function OverviewPage() {
               dataKey="avgWindSpeed"
               unit=" m/s"
               icon="windSpeed"
+              data={data}
+              error={error}
+              isLoading={isLoading}
+              isConnected={isConnected}
             />
             <WeatherCard
               title="Wind Speed (Max)"
               dataKey="maxWindSpeed"
               unit=" m/s"
               icon="windSpeed"
+              data={data}
+              error={error}
+              isLoading={isLoading}
+              isConnected={isConnected}
             />
             <WeatherCard
               title="Wind Direction"
               dataKey="windDirection"
               unit="°"
               icon="windDirection"
+              data={data}
+              error={error}
+              isLoading={isLoading}
+              isConnected={isConnected}
             />
           </div>
 

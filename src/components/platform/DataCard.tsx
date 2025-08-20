@@ -1,6 +1,5 @@
 "use client";
 
-import { useRealtimeWeatherData } from "@/hooks/useRealtimeWeatherData";
 import { format } from "date-fns";
 import { cardData } from "@/types/sensorData";
 import {
@@ -19,6 +18,10 @@ interface WeatherCardProps {
   dataKey: keyof cardData;
   unit: string;
   icon?: string;
+  data?: cardData | null;
+  error?: Error | null;
+  isLoading?: boolean;
+  isConnected?: boolean;
 }
 
 export default function WeatherCard({
@@ -26,9 +29,11 @@ export default function WeatherCard({
   dataKey,
   unit,
   icon,
+  data,
+  error,
+  isLoading,
+  isConnected,
 }: WeatherCardProps) {
-  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
-
   const getIcon = () => {
     switch (icon) {
       case "temperature":

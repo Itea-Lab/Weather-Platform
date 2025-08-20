@@ -34,6 +34,7 @@
     "@aws-amplify/backend-cli": "^1.8.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/aws-lambda": "^8.10.152",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

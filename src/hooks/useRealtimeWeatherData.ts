@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PubSub } from "@aws-amplify/pubsub";
 import { cardData } from "@/types/sensorData";
 import { getIoTConfig, getWeatherTopic } from "@/lib/iotConfig";
+import { useTopicContext } from "@/hooks/TopicContext";
 
 // Simplified weather message interface based on what you'll actually use
 interface WeatherMessage {
@@ -21,6 +22,7 @@ interface WeatherMessage {
 }
 
 export function useRealtimeWeatherData() {
+  const { selectedTopic } = useTopicContext();
   const [data, setData] = useState<cardData | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,9 +50,11 @@ export function useRealtimeWeatherData() {
         setError(null);
         setIsLoading(true);
 
-        // Get IoT config
-        const iotConfig = await getIoTConfig();
-        const topic = getWeatherTopic();
+        console.log("Connecting to IoT topic:", selectedTopic);
+
+        // Get IoT config with selected topic
+        const iotConfig = await getIoTConfig(selectedTopic);
+        const topic = getWeatherTopic(selectedTopic);
 
         // Create PubSub client with IoT configuration
         const pubSubClient = new PubSub({
@@ -68,14 +72,13 @@ export function useRealtimeWeatherData() {
               const transformedData = transformWeatherMessage(messageData);
               setData(transformedData);
               setError(null);
-              // Weather data updated successfully
             } catch (parseError) {
-              console.error("❌ Error parsing IoT message:", parseError);
+              console.error("Error parsing IoT message:", parseError);
               setError(new Error("Failed to parse IoT message"));
             }
           },
           error: (err: any) => {
-            console.error("❌ IoT subscription error:", err);
+            console.error("IoT subscription error:", err);
             setError(new Error(`IoT connection error: ${err.message}`));
             setIsConnected(false);
           },
@@ -87,9 +90,9 @@ export function useRealtimeWeatherData() {
 
         setIsConnected(true);
         setIsLoading(false);
-        // Reduced logging: connection success
+        console.log("Successfully connected to IoT topic");
       } catch (err) {
-        console.error("❌ Failed to setup real-time connection:", err);
+        console.error("Failed to setup real-time connection:", err);
         setError(
           new Error(
             `Failed to connect: ${
@@ -108,10 +111,10 @@ export function useRealtimeWeatherData() {
     return () => {
       if (subscription) {
         subscription.unsubscribe();
-        console.log("Unsubscribed from real-time data");
+        console.log("Unsubscribed from IoT topic");
       }
     };
-  }, [transformWeatherMessage]);
+  }, [transformWeatherMessage, selectedTopic]); // Re-run when topic changes
 
   // Function to manually update data (for testing with real IoT data)
   const updateData = useCallback(

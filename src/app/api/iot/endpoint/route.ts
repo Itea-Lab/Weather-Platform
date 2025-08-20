@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       }
 
       const endpoint = endpointResponse.endpointAddress;
-      console.log(`✅ Retrieved IoT Core endpoint directly: ${endpoint}`);
+      console.log(`Retrieved IoT Core endpoint: ${endpoint}`);
 
       return NextResponse.json({
         success: true,
