@@ -70,16 +70,6 @@ App
 ```
 
 ## Technical Implementation
-
-### Core Technologies
-
-- **Frontend**: Next.js 15, React 18, TypeScript
-- **Backend**: AWS Amplify Gen 2, Lambda Functions
-- **Real-time**: AWS IoT Core, MQTT over WebSockets
-- **Authentication**: AWS Cognito
-- **State Management**: React Context + useState
-- **Styling**: Tailwind CSS, Lucide Icons
-
 ### Key Patterns
 
 #### 1. Single Hook + Props Distribution
