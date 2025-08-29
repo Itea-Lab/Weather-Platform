@@ -5,6 +5,9 @@ import { addThing } from "./functions/addThing/resource";
 import { fetchThings } from "./functions/fetchThings/resource";
 import { deleteThing } from "./functions/deleteThing/resource";
 import { getIoTEndpoint } from "./functions/getIoTEndpoint/resource";
+import { storage } from "./storage/resource";
+import { CustomWeatherDataGlue } from "./custom/WeatherDataGlue/resource";
+import { CustomEventBridge } from "./custom/EventBridge/resource";
 
 export const backend = defineBackend({
   auth,
@@ -12,6 +15,7 @@ export const backend = defineBackend({
   fetchThings,
   deleteThing,
   getIoTEndpoint,
+  storage,
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
@@ -132,6 +136,29 @@ backend.auth.resources.authenticatedUserIamRole.addManagedPolicy(
   iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTConfigAccess")
 );
 
+// Create Weather Data Glue construct (using main stack)
+const weatherDataGlue = new CustomWeatherDataGlue(
+  backend.stack,
+  "WeatherDataGlue",
+  {
+    accountId,
+    region,
+    sourceBucketName: "itea-weather-data-lake-storage", // Source bucket with raw data
+    targetBucketName: backend.storage.resources.bucket.bucketName, // Amplify storage for processed data
+  }
+);
+
+// Create EventBridge construct for scheduled processing (using main stack)
+const eventBridge = new CustomEventBridge(
+  backend.stack,
+  "WeatherDataProcessing",
+  {
+    accountId,
+    region,
+    crawlerName: weatherDataGlue.crawler.name!,
+  }
+);
+
 backend.addOutput({
   custom: {
     addThingFunctionName: addThingLambda.functionName,
@@ -142,5 +169,10 @@ backend.addOutput({
     deleteThingFunctionArn: deleteThingLambda.functionArn,
     getIoTEndpointFunctionName: getIoTEndpointLambda.functionName,
     getIoTEndpointFunctionArn: getIoTEndpointLambda.functionArn,
+    glueDatabaseName: weatherDataGlue.database.ref,
+    glueCrawlerName: weatherDataGlue.crawler.name,
+    glueJobName: weatherDataGlue.job.name,
+    stateMachineArn: eventBridge.stateMachine.stateMachineArn,
+    eventBridgeRuleName: eventBridge.rule.ruleName,
   },
 });
