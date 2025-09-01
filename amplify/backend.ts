@@ -1,5 +1,6 @@
 import { defineBackend } from "@aws-amplify/backend";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as cognito from "aws-cdk-lib/aws-cognito";
 import { auth } from "./auth/resource";
 import { addThing } from "./functions/addThing/resource";
 import { fetchThings } from "./functions/fetchThings/resource";
@@ -129,14 +130,35 @@ authenticatedRole.addToPrincipalPolicy(
 );
 
 // Add AWS managed policies for IoT PubSub access
-backend.auth.resources.authenticatedUserIamRole.addManagedPolicy(
+authenticatedRole.addManagedPolicy(
   iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTDataAccess")
 );
-backend.auth.resources.authenticatedUserIamRole.addManagedPolicy(
+authenticatedRole.addManagedPolicy(
   iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTConfigAccess")
 );
 
-// Create Weather Data Glue construct (using main stack)
+// --- Cognito User Pool Group: platform-admin ---
+const userPool = backend.auth.resources.userPool;
+const platformAdminRoleArn = `arn:aws:iam::${accountId}:role/platform-admin`;
+const platformAdminRole = iam.Role.fromRoleArn(
+  backend.stack,
+  "PlatformAdminRole",
+  platformAdminRoleArn,
+  { mutable: false }
+);
+
+const platformAdminGroup = new cognito.CfnUserPoolGroup(
+  backend.stack,
+  "PlatformAdminGroup",
+  {
+    groupName: "platform-admin",
+    userPoolId: userPool.userPoolId,
+    roleArn: platformAdminRole.roleArn,
+    description: "Platform administrators with elevated permissions.",
+  }
+);
+
+// Create Weather Data Glue construct
 const weatherDataGlue = new CustomWeatherDataGlue(
   backend.stack,
   "WeatherDataGlue",
