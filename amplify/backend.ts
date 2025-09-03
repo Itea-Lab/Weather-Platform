@@ -9,6 +9,7 @@ import { getIoTEndpoint } from "./functions/getIoTEndpoint/resource";
 import { storage } from "./storage/resource";
 import { CustomWeatherDataGlue } from "./custom/WeatherDataGlue/resource";
 import { CustomEventBridge } from "./custom/EventBridge/resource";
+import { CustomCloudFront } from "./custom/CloudFront/resource";
 
 export const backend = defineBackend({
   auth,
@@ -170,6 +171,12 @@ const weatherDataGlue = new CustomWeatherDataGlue(
   }
 );
 
+// Create CloudFront CDN construct (uses CloudFormation template)
+const cloudFrontCDN = new CustomCloudFront(backend.stack, "WeatherDatasetCDN", {
+  storageBucketName: backend.storage.resources.bucket.bucketName,
+  storageBucketDomainName: backend.storage.resources.bucket.bucketDomainName,
+});
+
 // Create EventBridge construct for scheduled processing (using main stack)
 const eventBridge = new CustomEventBridge(
   backend.stack,
@@ -196,5 +203,7 @@ backend.addOutput({
     glueJobName: weatherDataGlue.job.name,
     stateMachineArn: eventBridge.stateMachine.stateMachineArn,
     eventBridgeRuleName: eventBridge.rule.ruleName,
+    weatherCdnDomainName: cloudFrontCDN.domainName,
+    weatherCdnDistributionId: cloudFrontCDN.distributionId,
   },
 });
