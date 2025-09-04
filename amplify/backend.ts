@@ -6,6 +6,7 @@ import { addThing } from "./functions/addThing/resource";
 import { fetchThings } from "./functions/fetchThings/resource";
 import { deleteThing } from "./functions/deleteThing/resource";
 import { getIoTEndpoint } from "./functions/getIoTEndpoint/resource";
+import { getDataset } from "./functions/getDataset/resource";
 import { storage } from "./storage/resource";
 import { CustomWeatherDataGlue } from "./custom/WeatherDataGlue/resource";
 import { CustomEventBridge } from "./custom/EventBridge/resource";
@@ -17,6 +18,7 @@ export const backend = defineBackend({
   fetchThings,
   deleteThing,
   getIoTEndpoint,
+  getDataset,
   storage,
 });
 
@@ -24,6 +26,7 @@ const addThingLambda = backend.addThing.resources.lambda;
 const fetchThingsLambda = backend.fetchThings.resources.lambda;
 const deleteThingLambda = backend.deleteThing.resources.lambda;
 const getIoTEndpointLambda = backend.getIoTEndpoint.resources.lambda;
+const getDatasetLambda = backend.getDataset.resources.lambda;
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
@@ -177,6 +180,27 @@ const cloudFrontCDN = new CustomCloudFront(backend.stack, "WeatherDatasetCDN", {
   storageBucketDomainName: backend.storage.resources.bucket.bucketDomainName,
 });
 
+// Add S3 permissions to the getDataset Lambda function
+const getDatasetS3PolicyStatement = new iam.PolicyStatement({
+  sid: "AllowS3ReadDatasets",
+  actions: ["s3:GetObject", "s3:ListBucket", "s3:ListObjectsV2"],
+  resources: [
+    backend.storage.resources.bucket.bucketArn,
+    `${backend.storage.resources.bucket.bucketArn}/*`,
+  ],
+});
+
+getDatasetLambda.addToRolePolicy(getDatasetS3PolicyStatement);
+
+// Add STS permissions to the getDataset Lambda function
+const getDatasetSTSPolicyStatement = new iam.PolicyStatement({
+  sid: "AllowSTSAccess",
+  actions: ["sts:GetCallerIdentity"],
+  resources: ["*"],
+});
+
+getDatasetLambda.addToRolePolicy(getDatasetSTSPolicyStatement);
+
 // Create EventBridge construct for scheduled processing (using main stack)
 const eventBridge = new CustomEventBridge(
   backend.stack,
@@ -198,6 +222,8 @@ backend.addOutput({
     deleteThingFunctionArn: deleteThingLambda.functionArn,
     getIoTEndpointFunctionName: getIoTEndpointLambda.functionName,
     getIoTEndpointFunctionArn: getIoTEndpointLambda.functionArn,
+    getDatasetFunctionName: getDatasetLambda.functionName,
+    getDatasetFunctionArn: getDatasetLambda.functionArn,
     glueDatabaseName: weatherDataGlue.database.ref,
     glueCrawlerName: weatherDataGlue.crawler.name,
     glueJobName: weatherDataGlue.job.name,
