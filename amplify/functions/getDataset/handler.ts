@@ -4,6 +4,8 @@ import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 interface DatasetInfo {
   latest_update: string;
   url: string;
+  size_bytes: number;
+  size_formatted: string;
 }
 
 interface DatasetResponse {
@@ -153,7 +155,12 @@ async function getDistrictDataset(
     const response = await s3Client.send(listCommand);
 
     if (!response.CommonPrefixes || response.CommonPrefixes.length === 0) {
-      return { latest_update: "", url: "" };
+      return {
+        latest_update: "",
+        url: "",
+        size_bytes: 0,
+        size_formatted: "0 B",
+      };
     }
 
     // Find the latest dataset folder based on timestamp
@@ -177,10 +184,15 @@ async function getDistrictDataset(
     }
 
     if (!latestFolder) {
-      return { latest_update: "", url: "" };
+      return {
+        latest_update: "",
+        url: "",
+        size_bytes: 0,
+        size_formatted: "0 B",
+      };
     }
 
-    // Get the actual CSV file inside the latest folder
+    // Get all files in the latest folder to calculate total size
     const fileListCommand = new ListObjectsV2Command({
       Bucket: bucketName,
       Prefix: latestFolder,
@@ -189,16 +201,34 @@ async function getDistrictDataset(
     const fileResponse = await s3Client.send(fileListCommand);
 
     if (!fileResponse.Contents || fileResponse.Contents.length === 0) {
-      return { latest_update: "", url: "" };
+      return {
+        latest_update: "",
+        url: "",
+        size_bytes: 0,
+        size_formatted: "0 B",
+      };
     }
 
-    // Find the CSV file (should be part-*.csv)
-    const csvFile = fileResponse.Contents.find(
-      (obj) => obj.Key && obj.Key.endsWith(".csv") && obj.Key.includes("part-")
-    );
+    // Calculate total size of all CSV files and find the first CSV file for URL
+    let totalSizeBytes = 0;
+    let csvFile = null;
+
+    for (const obj of fileResponse.Contents) {
+      if (obj.Key && obj.Key.endsWith(".csv") && obj.Key.includes("part-")) {
+        totalSizeBytes += obj.Size || 0;
+        if (!csvFile) {
+          csvFile = obj; // Use the first CSV file for the URL
+        }
+      }
+    }
 
     if (!csvFile || !csvFile.Key) {
-      return { latest_update: "", url: "" };
+      return {
+        latest_update: "",
+        url: "",
+        size_bytes: 0,
+        size_formatted: "0 B",
+      };
     }
 
     // Format the timestamp for display (20250903_052637 -> 2025-09-03 05:26:37)
@@ -210,10 +240,17 @@ async function getDistrictDataset(
     return {
       latest_update: formattedDate,
       url: cloudFrontUrl,
+      size_bytes: totalSizeBytes,
+      size_formatted: formatFileSize(totalSizeBytes),
     };
   } catch (error) {
     console.error(`Error getting dataset for district ${district}:`, error);
-    return { latest_update: "", url: "" };
+    return {
+      latest_update: "",
+      url: "",
+      size_bytes: 0,
+      size_formatted: "0 B",
+    };
   }
 }
 
@@ -233,4 +270,14 @@ function formatTimestamp(timestamp: string): string {
   const second = time.substring(4, 6);
 
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }

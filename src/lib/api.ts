@@ -1,6 +1,7 @@
 import useSWR from "swr";
+import { useMemo } from "react";
 import { cardData, WindData, RainData } from "@/types/sensorData";
-import { Dataset } from "@/types/dataset";
+import { Dataset, WeatherDatasetResponse } from "@/types/dataset";
 import {
   DeviceRegistrationData,
   DeviceRegistrationResponse,
@@ -262,4 +263,94 @@ export function useDevices() {
     isLoading,
     mutate, // For manual refresh
   };
+}
+
+// Weather Dataset API functions
+const EMPTY_DATASETS = {}; // Stable reference outside component
+
+export function useWeatherDatasets(district?: string) {
+  const url = district
+    ? `/api/weather/dataset?district=${encodeURIComponent(district)}`
+    : "/api/weather/dataset";
+
+  const { data, error, isLoading, mutate } = useSWR<WeatherDatasetResponse>(
+    url,
+    fetcher,
+    {
+      refreshInterval: 0, // Disable automatic refresh to prevent repeated errors
+      fallbackData: { datasets: EMPTY_DATASETS },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      onErrorRetry: () => {
+        // Disable all automatic retries
+        return;
+      },
+    }
+  );
+
+  // Use stable fallback reference
+  const datasets = data?.datasets ?? EMPTY_DATASETS;
+
+  return {
+    datasets,
+    error: error
+      ? error instanceof Error
+        ? error
+        : new Error(String(error))
+      : null,
+    isLoading,
+    mutate,
+  };
+}
+
+export async function fetchWeatherDataset(
+  district?: string
+): Promise<WeatherDatasetResponse> {
+  try {
+    const url = district
+      ? `/api/weather/dataset?district=${encodeURIComponent(district)}`
+      : "/api/weather/dataset";
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch weather dataset");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching weather dataset:", error);
+    throw error;
+  }
+}
+
+export async function downloadDatasetFile(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to download file");
+    }
+
+    // Create blob and download
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    throw error;
+  }
 }

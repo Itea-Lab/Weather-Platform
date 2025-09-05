@@ -1,6 +1,6 @@
 export interface Dataset {
   id: string;
-  _time: any; 
+  _time: any;
   temperature: number;
   humidity: number;
   pressure: number;
@@ -10,4 +10,21 @@ export interface Dataset {
   rainFallbyDay: number;
   rainFallbyHour: number;
   location: string;
+}
+
+export interface WeatherDataset {
+  district: string;
+  lastUpdate: string;
+  dataSize: string;
+}
+
+export interface DatasetInfo {
+  latest_update: string;
+  url: string;
+  size_bytes: number;
+  size_formatted: string;
+}
+
+export interface WeatherDatasetResponse {
+  datasets: Record<string, DatasetInfo>;
 }
