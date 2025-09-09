@@ -4,11 +4,11 @@ import WeatherCard from "@/components/platform/DataCard";
 import WindChart from "@/components/platform/WindChart";
 import RainChart from "@/components/platform/RainChart";
 import TopicSelector from "@/components/platform/TopicSelector";
-import { useRealtimeWeatherData } from "@/hooks/useRealtimeWeatherData";
+import { useIoT } from "@/hooks/useIoT";
 
 export default function OverviewPage() {
   // Single hook call for all weather cards
-  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
+  const { data, error, isLoading, isConnected } = useIoT();
 
   return (
     <div className="space-y-6">

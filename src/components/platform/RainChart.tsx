@@ -1,6 +1,6 @@
 "use client";
 
-import { useRealtimeRainData } from "@/hooks/useRealtimeChartData";
+import { useIoT } from "@/hooks/useIoT";
 import {
   BarChart,
   Bar,
@@ -14,7 +14,7 @@ import {
 import { format, parseISO } from "date-fns";
 
 export default function RainChart() {
-  const { rainData, error, isLoading } = useRealtimeRainData();
+  const { rainData, error, isLoading } = useIoT();
 
   const formatDate = (dateString: string) => {
     try {

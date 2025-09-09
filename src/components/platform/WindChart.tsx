@@ -1,6 +1,6 @@
 "use client";
 
-import { useRealtimeWindData } from "@/hooks/useRealtimeChartData";
+import { useIoT } from "@/hooks/useIoT";
 import {
   LineChart,
   XAxis,
@@ -14,7 +14,7 @@ import {
 import { format, parseISO } from "date-fns";
 
 export default function WindChart() {
-  const { windData, error, isLoading } = useRealtimeWindData();
+  const { windData, error, isLoading } = useIoT();
 
   const formatDate = (dateString: string) => {
     try {

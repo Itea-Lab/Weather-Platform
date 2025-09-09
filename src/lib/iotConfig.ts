@@ -1,4 +1,4 @@
-import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 
 // Cache for IoT endpoint to prevent multiple API calls
 let cachedEndpoint: string | null = null;
@@ -6,25 +6,154 @@ let cacheTimestamp: number = 0;
 let pendingRequest: Promise<string> | null = null; // Prevent race conditions
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes cache
 
+// Cache for AWS credentials to prevent multiple auth calls
+let cachedCredentials: any = null;
+let credentialsCacheTimestamp: number = 0;
+let pendingCredentialsRequest: Promise<any> | null = null;
+const CREDENTIALS_CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes cache (shorter than typical token expiry)
+
 /**
- * Get AWS credentials for the current authenticated user
+ * Get AWS credentials for the current authenticated user with caching
  */
 async function getAWSCredentials() {
-  try {
-    const session = await fetchAuthSession();
-
-    if (!session.credentials) {
-      throw new Error("No AWS credentials found");
-    }
-
-    return {
-      credentials: session.credentials,
-      region: "us-east-1", // Use the region from amplify_outputs.json
-    };
-  } catch (error) {
-    console.error("❌ Failed to get AWS credentials:", error);
-    throw new Error("Authentication required for IoT access");
+  // Check if we have valid cached credentials
+  const now = Date.now();
+  if (
+    cachedCredentials &&
+    now - credentialsCacheTimestamp < CREDENTIALS_CACHE_DURATION_MS
+  ) {
+    return cachedCredentials;
   }
+
+  // If there's already a pending credentials request, wait for it
+  if (pendingCredentialsRequest) {
+    return await pendingCredentialsRequest;
+  }
+
+  // Create the credentials request promise
+  pendingCredentialsRequest = (async () => {
+    try {
+      // First verify user is authenticated
+      const currentUser = await getCurrentUser();
+
+      // Get auth session with proper error handling and retries
+      let session;
+      let retries = 3;
+
+      while (retries > 0) {
+        try {
+          // Try to get session - force refresh on first attempt if cookies exist but session fails
+          session = await fetchAuthSession({
+            forceRefresh: retries === 3, // Force refresh on first attempt
+          });
+
+          // Check if we have valid credentials
+          if (
+            session?.credentials?.accessKeyId &&
+            session?.credentials?.secretAccessKey &&
+            session?.credentials?.sessionToken
+          ) {
+            break;
+          } else {
+            console.warn("Incomplete credentials, retrying...");
+          }
+        } catch (error) {
+          console.error(
+            `Auth session fetch failed (retry ${4 - retries}):`,
+            error
+          );
+
+          // If it's an identity pool error, be more specific
+          if (error instanceof Error) {
+            if (error.message.includes("Invalid identity pool")) {
+              throw new Error(
+                "Identity Pool configuration error. Check IAM roles and permissions."
+              );
+            } else if (error.message.includes("Access denied")) {
+              throw new Error(
+                "Access denied - check IoT policy attachment to Cognito Identity ID"
+              );
+            }
+          }
+        }
+
+        retries--;
+        if (retries > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      }
+
+      if (
+        !session?.credentials?.accessKeyId ||
+        !session?.credentials?.secretAccessKey ||
+        !session?.credentials?.sessionToken
+      ) {
+        console.error("Failed to get complete credentials after all retries");
+
+        // Try one final attempt with force refresh and clear cache
+        try {
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("aws-amplify-cache");
+            localStorage.removeItem("aws-amplify-cache");
+          }
+
+          session = await fetchAuthSession({ forceRefresh: true });
+
+          if (
+            !session?.credentials?.accessKeyId ||
+            !session?.credentials?.secretAccessKey ||
+            !session?.credentials?.sessionToken
+          ) {
+            throw new Error(
+              "Could not obtain valid AWS credentials from Identity Pool"
+            );
+          }
+        } catch (finalError) {
+          console.error("Final credential attempt failed:", finalError);
+          throw new Error(
+            "Could not obtain valid AWS credentials from Identity Pool"
+          );
+        }
+      }
+
+      const credentials = {
+        credentials: session.credentials,
+        identityId: session.identityId,
+        region: "us-east-1",
+      };
+
+      // Cache the successful result
+      cachedCredentials = credentials;
+      credentialsCacheTimestamp = now;
+
+      console.log("✅ AWS credentials cached successfully");
+      return credentials;
+    } catch (error) {
+      console.error("Failed to get AWS credentials:", error);
+
+      // More specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes("not authenticated")) {
+          throw new Error("User is not authenticated. Please sign in first.");
+        } else if (error.message.includes("Invalid identity pool")) {
+          throw new Error(
+            "Identity Pool configuration error. Check IAM roles and permissions."
+          );
+        } else if (error.message.includes("Identity Pool")) {
+          throw new Error(
+            "Identity Pool access denied. Check user permissions."
+          );
+        }
+      }
+
+      throw new Error("Authentication required for IoT access");
+    } finally {
+      // Clear the pending request so future calls can proceed
+      pendingCredentialsRequest = null;
+    }
+  })();
+
+  return await pendingCredentialsRequest;
 }
 
 /**
@@ -104,16 +233,66 @@ export function clearIoTEndpointCache(): void {
 export function clearAllIoTCache(): void {
   clearIoTEndpointCache();
 
+  // Clear credentials cache
+  cachedCredentials = null;
+  credentialsCacheTimestamp = 0;
+  pendingCredentialsRequest = null;
+
   // Clear browser storage that might affect IoT connections
   if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem("aws-amplify-cache");
       sessionStorage.removeItem("aws-amplify-federatedInfo");
       localStorage.removeItem("aws-amplify-cache");
-      console.log("AWS Amplify caches cleared");
+
+      // Also clear any Cognito-related cached items
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes("CognitoIdentityServiceProvider")) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      console.log("All IoT caches cleared");
     } catch (e) {
       console.warn("Could not clear some cache items:", e);
     }
+  }
+}
+
+/**
+ * Force refresh authentication session and clear stale credentials
+ * Use this when getting "Authentication required for IoT access" errors
+ */
+export async function refreshAuthForIoT(): Promise<boolean> {
+  try {
+    console.log("Refreshing authentication for IoT...");
+
+    // Clear all caches first
+    clearAllIoTCache();
+
+    // Wait a moment for cache clearing to take effect
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Force refresh the session
+    const session = await fetchAuthSession({ forceRefresh: true });
+
+    if (
+      session?.credentials?.accessKeyId &&
+      session?.credentials?.secretAccessKey &&
+      session?.credentials?.sessionToken
+    ) {
+      console.log("Authentication refresh successful");
+      return true;
+    } else {
+      console.error("Authentication refresh failed - missing credentials");
+      return false;
+    }
+  } catch (error) {
+    console.error("Authentication refresh failed:", error);
+    return false;
   }
 }
 
@@ -122,7 +301,7 @@ export function clearAllIoTCache(): void {
  */
 export async function getIoTConfig(customTopic?: string) {
   try {
-    const { region } = await getAWSCredentials();
+    const { region, credentials, identityId } = await getAWSCredentials();
     const endpoint = await getIoTEndpoint();
     const finalTopic = customTopic; // Use ONLY the custom topic, no fallback
 
@@ -137,6 +316,7 @@ export async function getIoTConfig(customTopic?: string) {
       endpoint: `wss://${endpoint}/mqtt`,
       region,
       topic: finalTopic,
+      credentials, // Include credentials for PubSub
     };
   } catch (error) {
     console.error("Failed to get IoT configuration:", error);

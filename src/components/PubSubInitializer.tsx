@@ -6,26 +6,21 @@ import outputs from "../../amplify_outputs.json";
 
 export default function PubSubInitializer() {
   useEffect(() => {
-    // Configure Amplify with PubSub for AWS IoT Core
-    const configureAmplifyWithPubSub = async () => {
+    // Configure Amplify
+    const configureAmplify = async () => {
       try {
-        // Configure Amplify first
+        // Configure Amplify - this includes PubSub configuration automatically
         Amplify.configure(outputs, {
           ssr: true,
         });
 
-        // Pre-fetch and cache IoT endpoint globally
-        // Ensures only ONE API call is made for the entire application
-        console.log("IoT Core endpoint cached globally:");
+        console.log("✅ Amplify configured successfully");
       } catch (error) {
-        console.error(
-          "❌ Failed to configure Amplify or fetch IoT endpoint:",
-          error
-        );
+        console.error("❌ Failed to configure Amplify:", error);
       }
     };
 
-    configureAmplifyWithPubSub();
+    configureAmplify();
   }, []);
 
   return null; // This component doesn't render anything
