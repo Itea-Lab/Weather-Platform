@@ -6,7 +6,7 @@ import RainChart from "@/components/platform/RainChart";
 import TopicSelector from "@/components/platform/TopicSelector";
 import { useIoT } from "@/hooks/useIoT";
 
-export default function OverviewPage() {
+export default function DashboardPage() {
   // Single hook call for all weather cards
   const { data, error, isLoading, isConnected } = useIoT();
 

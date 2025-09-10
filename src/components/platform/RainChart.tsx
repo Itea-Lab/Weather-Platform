@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useIoT } from "@/hooks/useIoT";
 import {
   BarChart,
@@ -15,6 +16,16 @@ import { format, parseISO } from "date-fns";
 
 export default function RainChart() {
   const { rainData, error, isLoading } = useIoT();
+  const [, setTick] = useState(0);
+
+  // Force re-render every second to update stale status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((tick) => tick + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const formatDate = (dateString: string) => {
     try {
@@ -58,11 +69,30 @@ export default function RainChart() {
         <h2 className="text-lg font-semibold">Rainfall Live Data</h2>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500">
-            Live data from IoT sensors
+            {rainData.length > 0 &&
+              (() => {
+                const latestData = rainData[rainData.length - 1];
+                const dataTime = new Date(latestData.timestamp).getTime();
+                const timeDiff = Date.now() - dataTime;
+                return timeDiff > 3000
+                  ? "Last data from IoT sensors"
+                  : "Live data from IoT sensors";
+              })()}
           </span>
-          {!isLoading && rainData.length > 0 && (
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          )}
+          {!isLoading &&
+            rainData.length > 0 &&
+            (() => {
+              const latestData = rainData[rainData.length - 1];
+              const dataTime = new Date(latestData.timestamp).getTime();
+              const timeDiff = Date.now() - dataTime;
+              const isStale = timeDiff > 3000;
+
+              return isStale ? (
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              ) : (
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              );
+            })()}
         </div>
       </div>
 

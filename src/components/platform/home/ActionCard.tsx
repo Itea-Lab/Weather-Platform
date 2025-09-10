@@ -39,7 +39,7 @@ export default function ActionCard() {
       title: "View Dashboard",
       description: "Monitor your real-time data",
       icon: <BarChart3 className="w-6 h-6 text-blue-500" />,
-      to: "/platform/overview",
+      to: "/platform/dashboard",
     },
   ];
   return (

@@ -26,19 +26,26 @@ IoT Devices → AWS IoT Core → MQTT Topics → Amplify PubSub → Nextjs Dashb
 
 ```typescript
 // Dynamic IoT configuration based on selected topic
-export async function getIoTConfig(selectedTopic: string = "weather/hcmc") {
-  const response = await fetch("/api/iot/endpoint");
-  const data = await response.json();
-
-  return {
-    region: "your-region",
-    endpoint: `wss://${data.endpoint}/mqtt`,
-  };
-}
-
-// Generate topic based on selection
-export function getWeatherTopic(selectedTopic: string): string {
-  return `weather/${selectedTopic}`;
+export async function getIoTConfig(customTopic?: string) {
+  try {
+    const { region, credentials, identityId } = await getAWSCredentials();
+    const endpoint = await getIoTEndpoint();
+    const finalTopic = customTopic;
+    if (!finalTopic) {
+      throw new Error(
+        "No topic provided to getIoTConfig - this is a bug in the topic selection system"
+      );
+    }
+    return {
+      endpoint: `wss://${endpoint}/mqtt`,
+      region,
+      topic: finalTopic,
+      credentials,
+    };
+  } catch (error) {
+    console.error("Failed to get IoT configuration:", error);
+    throw error;
+  }
 }
 ```
 

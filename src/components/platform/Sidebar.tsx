@@ -30,7 +30,7 @@ export default function Sidebar() {
     { name: "Devices", path: "/platform/devices", icon: <Cpu /> },
     {
       name: "Dashboard",
-      path: "/platform/overview",
+      path: "/platform/dashboard",
       icon: <LayoutDashboard />,
     },
     { name: "Dataset", path: "/platform/dataset", icon: <Database /> },

@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { useState, useEffect } from "react";
 import { cardData } from "@/types/sensorData";
 import {
   Thermometer,
@@ -34,6 +35,16 @@ export default function WeatherCard({
   isLoading,
   isConnected,
 }: WeatherCardProps) {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time every second to refresh stale status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
   const getIcon = () => {
     switch (icon) {
       case "temperature":
@@ -51,6 +62,17 @@ export default function WeatherCard({
     }
   };
 
+  const isDataStale = () => {
+    if (!data || !data.timestamp) return true;
+    try {
+      const dataTime = new Date(data.timestamp).getTime();
+      const timeDiff = currentTime - dataTime;
+      return timeDiff > 3000; // 3 seconds
+    } catch {
+      return true;
+    }
+  };
+
   const getValue = () => {
     if (isLoading)
       return (
@@ -64,6 +86,7 @@ export default function WeatherCard({
     }
     if (!data) return "N/A";
 
+    // Show the actual data value regardless of staleness
     const value = data[dataKey];
     if (typeof value === "number") {
       return value.toFixed(1) + unit;
@@ -74,7 +97,15 @@ export default function WeatherCard({
   const getUpdateTime = () => {
     if (!data || !data.timestamp) return "Unknown";
     try {
-      return format(new Date(data.timestamp), "HH:mm:ss");
+      const dataTime = new Date(data.timestamp);
+      const timeDiff = currentTime - dataTime.getTime();
+
+      if (timeDiff > 3000) {
+        const secondsAgo = Math.floor(timeDiff / 1000);
+        return `${secondsAgo}s ago`;
+      }
+
+      return format(dataTime, "HH:mm:ss");
     } catch {
       return "Invalid time";
     }
@@ -101,19 +132,21 @@ export default function WeatherCard({
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-lg font-medium text-gray-900">{title}</h3>
             {/* Connection status indicator */}
-            {isConnected ? (
+            {isConnected && !isDataStale() ? (
               <div title="Real-time connected">
                 <Wifi className="w-4 h-4 text-green-500" />
               </div>
             ) : (
-              <div title="Disconnected">
+              <div title={isDataStale() ? "Data stale (>3s)" : "Disconnected"}>
                 <WifiOff className="w-4 h-4 text-red-500" />
               </div>
             )}
           </div>
           <p className="text-sm text-gray-500">
-            {isConnected
+            {isConnected && !isDataStale()
               ? `Last update: ${getUpdateTime()}`
+              : isDataStale()
+              ? `Last seen: ${getUpdateTime()}`
               : "Waiting for connection..."}
           </p>
           {error && getErrorMessage()}
@@ -123,10 +156,16 @@ export default function WeatherCard({
       <div className="mt-2 text-3xl font-semibold text-gray-900">
         {getValue()}
       </div>
-      {isConnected && !isLoading && (
+      {isConnected && !isLoading && !isDataStale() && (
         <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           Online
+        </div>
+      )}
+      {isDataStale() && (
+        <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
+          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+          Offline
         </div>
       )}
     </div>

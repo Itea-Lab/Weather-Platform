@@ -8,6 +8,11 @@
 - [Dynamic Topic Subscription System](./changing-topic-subscription/README.md)
 - [Hook Optimization: Props Passing Strategy](./hook-props-passing.md)
 
+### Data Processing Pipeline
+
+- [Dataset Transformation](./dataset-transformation/README.md) - Step Functions, Glue crawler, and ETL operations
+- [CloudFront CDN for Resources](./cloudfront-for-download-resources/README.md) - Global dataset distribution
+
 ### Backend Setup
 
 - [AWS Amplify Backend Setup](../setup_amplify_backend/README.md)
@@ -22,6 +27,7 @@
 - **Live Weather Data**: Temperature, humidity, pressure, wind, rainfall
 - **Multiple Visualizations**: Cards, charts, and real-time indicators
 - **Connection Status**: Visual feedback for IoT connection health
+- **Offline Detection**: Stale data indicators with 3-second threshold
 - **Error Handling**: Graceful degradation and error recovery
 
 ### Dynamic Topic Switching
@@ -31,14 +37,24 @@
 - **Real-time Switching**: No page reloads required
 - **Clean State Management**: Proper connection cleanup
 
+### Data Processing Pipeline
+
+- **Automated ETL**: Daily processing at midnight UTC+7
+- **Step Functions Orchestration**: Crawler → ETL workflow
+- **Data Cataloging**: Glue crawler for schema discovery
+- **CSV Generation**: Structured datasets per location
+- **CloudFront Distribution**: Global CDN for dataset access
+
 ### Performance Optimization
 
-- **Connection Reduction**: 6→1 IoT connections via props passing
+- **Single Hook Architecture**: Centralized IoT data management
 - **Memory Efficiency**: Proper subscription management
 - **Resource Optimization**: Shared data streams
-- **Clean Logging**: Security-conscious debug output
+- **Professional Logging**: Clean console output with appropriate levels
 
 ## Architecture Overview
+
+### Real-time Data Flow
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -51,6 +67,21 @@
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
+### Data Processing Pipeline
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  EventBridge    │────│ Step Functions   │────│   Glue Crawler  │
+│ (Daily Schedule)│    │   (Orchestrator) │    │ (Schema Detect) │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   CloudFront    │────│   S3 Datasets    │────│   Glue ETL Job  │
+│     (CDN)       │    │   (CSV Files)    │    │ (Transform Data)│
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
 ### Component Architecture
 
 ```
@@ -58,28 +89,37 @@ App
 ├── TopicProvider (Global State)
 ├── AuthProvider (Authentication)
 └── Dashboard
-    ├── TopicSelector (Dynamic Swi tching)
-    ├── DataCards (Props-based Data)
-    │   ├── Temperature Card
-    │   ├── Humidity Card
-    │   ├── Pressure Card
-    │   └── Wind Cards
-    └── Charts (Separate Subscriptions)
-        ├── Wind Chart
-        └── Rain Chart
+    ├── TopicSelector (Dynamic Switching)
+    ├── DataCards (Centralized useIoT Hook)
+    │   ├── Temperature Card (Offline Detection)
+    │   ├── Humidity Card (Stale Data Indicators)
+    │   ├── Pressure Card (Real-time Updates)
+    │   └── Wind Cards (Status Indicators)
+    └── Charts (Centralized useIoT Hook)
+        ├── Wind Chart (Status Indicators)
+        └── Rain Chart (Offline Detection)
 ```
 
 ## Technical Implementation
+
 ### Key Patterns
 
-#### 1. Single Hook + Props Distribution
+#### 1. Centralized IoT Hook
 
 ```tsx
-// Parent: Single data source
-const { data, error, isLoading } = useRealtimeWeatherData();
+// Single hook for all IoT data
+const {
+  weatherData,
+  windData,
+  rainData,
+  error,
+  isLoading
+} = useIoT();
 
-// Children: Props-based consumption
-<WeatherCard data={data} error={error} isLoading={isLoading} />;
+// Components consume specific data
+<WeatherCard data={weatherData} error={error} isLoading={isLoading} />
+<WindChart data={windData} />
+<RainChart data={rainData} />
 ```
 
 #### 2. Dynamic Topic Subscription
@@ -100,9 +140,23 @@ const TopicContext = createContext<TopicContextType>();
 const { selectedTopic, setSelectedTopic } = useTopicContext();
 ```
 
+#### 4. Offline Status Detection
+
+```tsx
+// Real-time staleness detection
+const isDataStale = weatherData.timestamp ?
+  Date.now() - weatherData.timestamp > 3000 : true;
+
+// Visual indicators
+<StatusDot color={isDataStale ? "red" : "green"} />
+<StatusText>{isDataStale ? "Offline" : "Live data"}</StatusText>
+```
+
 ## Common Issues
 
 - Connection troubleshooting
 - Performance optimization
 - Security best practices
+- Data processing pipeline monitoring
+- CloudFront cache invalidation
 - Feature implementation guides

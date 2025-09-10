@@ -1,12 +1,4 @@
-# AWS Setup Guides
-
-### Getting Started
-
-- [Manual Amplify Setup](./manual_setup.md) - Complete guide for manual Amplify Gen 2 setup, especially for pnpm on Windows
-- [Lambda Functions Setup](./create_function.md) - Complete guide for creating and deploying Lambda functions
-- [Authentication Setup](./authentication/README.md) - AWS Cognito authentication configuration
-- [API Gateway Setup](./create_api_gateway.md) - RESTful API and GraphQL setup
-- [Storage Setup](./create_storage.md) - S3 and database configurationy Gen 2 Setup Documentation
+# AWS Amplify Gen 2 Setup Documentation
 
 This directory contains comprehensive setup guides for AWS Amplify Generation 2 backend components.
 
@@ -14,16 +6,21 @@ This directory contains comprehensive setup guides for AWS Amplify Generation 2 
 
 ### Core Components
 
-- [Lambda Functions Setup](../create_function.md) - Complete guide for creating and deploying Lambda functions
+- [Manual Amplify Setup](./manual_setup.md) - Complete guide for manual Amplify Gen 2 setup, especially for pnpm on Windows
+- [Lambda Functions Setup](./create_function.md) - Complete guide for creating and deploying Lambda functions
 - [Authentication Setup](./authentication/README.md) - AWS Cognito authentication configuration
-- [API Gateway Setup](../create_api_gateway.md) - RESTful API and GraphQL setup
-- [Storage Setup](../create_storage.md) - S3 and database configuration
+- [API Gateway Setup](./create_api_gateway.md) - RESTful API and GraphQL setup
+- [Storage Setup](./create_storage.md) - S3 and database configuration
 
-### Specific Features
+### Data Processing Pipeline
+
+- [AWS Glue Setup](./setup_glue/README.md) - Data cataloging and ETL operations
+- [CloudFront Distribution](./setup_cloudfront/README.md) - CDN setup for dataset distribution
+
+### IoT Integration
 
 - [IoT Device Management](./add_device.md/README.md) - IoT Core integration and device registration
 - [IoT Device Fetching](./fetchThings/README.md) - Device data retrieval
-- [Data Processing](./setup_glue/README.md) - AWS Glue for ETL operations
 
 ## Quick Start
 
