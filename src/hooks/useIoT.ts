@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PubSub } from "@aws-amplify/pubsub";
 import { cardData, WindData, RainData } from "@/types/sensorData";
-import { getIoTConfig, getWeatherTopic } from "@/lib/iotConfig";
+import { iotConfigManager, getWeatherTopic } from "@/lib/iotConfig";
 import { useTopicContext } from "@/hooks/TopicContext";
 
 interface WeatherMessage {
@@ -101,8 +101,8 @@ export function useIoT() {
 
         console.info("[IoT] Connecting to topic:", weatherTopic);
 
-        // Get IoT config with selected topic and credentials (cached)
-        const iotConfig = await getIoTConfig(selectedTopic);
+        // Get IoT config using singleton manager (cached)
+        const iotConfig = await iotConfigManager.getConfig();
         console.debug("[IoT] Config fetched", {
           region: iotConfig.region,
           endpoint: iotConfig.endpoint,

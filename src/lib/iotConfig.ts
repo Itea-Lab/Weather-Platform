@@ -1,4 +1,80 @@
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
+import { getAWSRegion } from "./awsConfig";
+
+// Global IoT configuration singleton to prevent duplicate API calls
+class IoTConfigManager {
+  private config: any = null;
+  private configPromise: Promise<any> | null = null;
+  private lastFetch: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  async getConfig(): Promise<any> {
+    const now = Date.now();
+
+    // Return cached config if valid
+    if (this.config && now - this.lastFetch < this.CACHE_DURATION) {
+      // console.log("Using cached IoT configuration");
+      return this.config;
+    }
+
+    // Return existing promise if already fetching
+    if (this.configPromise) {
+      // console.log("Waiting for existing IoT config fetch");
+      return this.configPromise;
+    }
+
+    // Start new fetch
+    // console.log("Fetching fresh IoT configuration");
+    this.configPromise = this.fetchConfig();
+
+    try {
+      this.config = await this.configPromise;
+      this.lastFetch = now;
+      return this.config;
+    } finally {
+      this.configPromise = null;
+    }
+  }
+
+  private async fetchConfig(): Promise<any> {
+    // Get endpoint and region from API
+    const response = await fetch("/api/iot/endpoint", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.endpoint || !data.region) {
+      throw new Error(data.error || "Failed to get IoT configuration from API");
+    }
+
+    // Get AWS credentials for PubSub
+    const { region, credentials, identityId } = await getAWSCredentials();
+
+    return {
+      endpoint: `wss://${data.endpoint}/mqtt`,
+      region: data.region,
+      accountId: data.accountId,
+      websocketUrl: data.websocketUrl,
+      credentials, // Include credentials for PubSub
+    };
+  }
+
+  clearCache(): void {
+    this.config = null;
+    this.lastFetch = 0;
+    this.configPromise = null;
+    console.log("IoT configuration cache cleared");
+  }
+}
+
+// Export singleton instance
+export const iotConfigManager = new IoTConfigManager();
 
 // Cache for IoT endpoint to prevent multiple API calls
 let cachedEndpoint: string | null = null;
@@ -116,10 +192,13 @@ async function getAWSCredentials() {
         }
       }
 
+      // Get region dynamically
+      const region = await getAWSRegion();
+
       const credentials = {
         credentials: session.credentials,
         identityId: session.identityId,
-        region: "us-east-1",
+        region,
       };
 
       // Cache the successful result
@@ -233,6 +312,9 @@ export function clearIoTEndpointCache(): void {
 export function clearAllIoTCache(): void {
   clearIoTEndpointCache();
 
+  // Clear IoT config manager cache
+  iotConfigManager.clearCache();
+
   // Clear credentials cache
   cachedCredentials = null;
   credentialsCacheTimestamp = 0;
@@ -284,7 +366,6 @@ export async function refreshAuthForIoT(): Promise<boolean> {
       session?.credentials?.secretAccessKey &&
       session?.credentials?.sessionToken
     ) {
-      console.log("Authentication refresh successful");
       return true;
     } else {
       console.error("Authentication refresh failed - missing credentials");

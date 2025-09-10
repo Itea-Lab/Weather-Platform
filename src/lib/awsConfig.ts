@@ -1,6 +1,6 @@
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import { LambdaClient } from "@aws-sdk/client-lambda";
-import { IoTClient, DescribeEndpointCommand } from "@aws-sdk/client-iot";
+import { IoTClient } from "@aws-sdk/client-iot";
 
 // Cache for AWS region to avoid multiple STS calls
 let cachedRegion: string | null = null;
@@ -39,36 +39,33 @@ export async function getAWSRegion(): Promise<string> {
 }
 
 /**
- * Internal function to detect AWS region
+ * Internal function to detect AWS region by calling the IoT endpoint API
  */
 async function detectRegion(): Promise<string> {
   try {
-    // First try environment variable (works in Lambda and local with proper setup)
-    const envRegion = process.env.AWS_REGION;
-    if (envRegion) {
-      console.log(`Using AWS region from environment: ${envRegion}`);
-      return envRegion;
+    console.log("Detecting AWS region from IoT endpoint API...");
+
+    const response = await fetch("/api/iot/endpoint", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // For local development, use STS client to determine region
-    console.log("Detecting AWS region using STS client configuration...");
-    const stsClient = new STSClient({}); // Uses default region resolution
+    const data = await response.json();
 
-    // Attempt to call STS to verify connectivity and get account info
-    await stsClient.send(new GetCallerIdentityCommand({}));
-
-    // Get the region from the STS client configuration
-    const clientConfig = stsClient.config;
-    const region = await clientConfig.region();
-
-    if (typeof region === "string") {
-      console.log(`Detected AWS region: ${region}`);
-      return region;
+    if (!data.success || !data.region) {
+      throw new Error(
+        data.error || "Failed to get region from IoT endpoint API"
+      );
     }
 
-    throw new Error("Could not determine region from STS client configuration");
+    console.log(`Detected AWS region from Lambda: ${data.region}`);
+    return data.region;
   } catch (error) {
-    console.warn("Could not determine AWS region dynamically:", error);
+    console.warn("Could not determine AWS region from API:", error);
     const fallbackRegion = "us-east-1";
     console.log(`Using fallback AWS region: ${fallbackRegion}`);
     return fallbackRegion;
@@ -76,8 +73,7 @@ async function detectRegion(): Promise<string> {
 }
 
 /**
- * Get AWS account information including account ID and region
- * Uses cached region if available
+ * Get AWS account information including account ID and region from API
  * @returns Promise<{accountId: string, region: string}>
  */
 export async function getAWSAccountInfo(): Promise<{
@@ -85,24 +81,31 @@ export async function getAWSAccountInfo(): Promise<{
   region: string;
 }> {
   try {
-    const region = await getAWSRegion();
+    console.log("Getting AWS account information from IoT endpoint API...");
 
-    // Create STS client with the detected region
-    const stsClient = new STSClient({ region });
-    const callerIdentity = await stsClient.send(
-      new GetCallerIdentityCommand({})
-    );
+    const response = await fetch("/api/iot/endpoint", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
-    if (!callerIdentity.Account) {
-      throw new Error("Could not determine AWS account ID");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.accountId || !data.region) {
+      throw new Error(
+        data.error || "Failed to get account information from API"
+      );
     }
 
     return {
-      accountId: callerIdentity.Account,
-      region: region,
+      accountId: data.accountId,
+      region: data.region,
     };
   } catch (error) {
-    console.error("Failed to get AWS account information:", error);
+    console.error("Failed to get AWS account information from API:", error);
     throw error;
   }
 }
@@ -164,28 +167,31 @@ export async function getIoTCoreEndpoint(): Promise<string> {
 }
 
 /**
- * Internal function to detect IoT Core endpoint
- * This uses the same approach as the Lambda functions
+ * Internal function to detect IoT Core endpoint from API
  */
 async function detectIoTEndpoint(): Promise<string> {
   try {
-    const region = await getAWSRegion();
-    console.log("Detecting IoT Core endpoint...");
+    console.log("Detecting IoT Core endpoint from API...");
 
-    const iotClient = new IoTClient({ region });
-    const endpointResponse = await iotClient.send(
-      new DescribeEndpointCommand({
-        endpointType: "iot:Data-ATS", // ATS endpoint for device connections
-      })
-    );
+    const response = await fetch("/api/iot/endpoint", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
-    if (!endpointResponse.endpointAddress) {
-      throw new Error("Could not retrieve IoT Core endpoint address");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    return endpointResponse.endpointAddress;
+
+    const data = await response.json();
+
+    if (!data.success || !data.endpoint) {
+      throw new Error(data.error || "Failed to get IoT endpoint from API");
+    }
+
+    console.log(`IoT Core endpoint from Lambda: ${data.endpoint}`);
+    return data.endpoint;
   } catch (error) {
-    console.error("Failed to detect IoT Core endpoint:", error);
+    console.error("Failed to detect IoT Core endpoint from API:", error);
     throw new Error("Could not determine IoT Core endpoint");
   }
 }

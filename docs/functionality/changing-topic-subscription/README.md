@@ -175,7 +175,7 @@ export async function getIoTConfig(selectedTopic: string = "hcmc") {
 
     const data = await response.json();
     const config = {
-      region: "us-east-1",
+      region: data.region, // Use dynamic region from API response
       endpoint: `wss://${data.endpoint}/mqtt`,
     };
 

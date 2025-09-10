@@ -17,6 +17,10 @@ This directory contains comprehensive setup guides for AWS Amplify Generation 2 
 - [AWS Glue Setup](./setup_glue/README.md) - Data cataloging and ETL operations
 - [CloudFront Distribution](./setup_cloudfront/README.md) - CDN setup for dataset distribution
 
+### Configuration
+
+- [IoT Endpoint and Credentials Fetching](./fetchEndpoint/README.md) - AWS STS-based IoT endpoint discovery and credential generation
+
 ### IoT Integration
 
 - [IoT Device Management](./add_device.md/README.md) - IoT Core integration and device registration

@@ -4,86 +4,82 @@ import { IoTClient, DescribeEndpointCommand } from "@aws-sdk/client-iot";
 import { invokeLambda } from "@/lib/lambdaInvoker";
 
 export async function GET(request: Request) {
+  console.log("Getting IoT endpoint for account...");
+
+  // Try Lambda function first (which has proper IAM permissions and region detection)
   try {
-    console.log("Getting IoT endpoint for account...");
+    const lambdaResponse = await invokeLambda("getIoTEndpointFunctionName", {});
 
-    const region = "us-east-1"; // Use your known region
-
-    // First try direct AWS SDK approach (works in some environments)
-    try {
-      // Create STS client to get account identity
-      const stsClient = new STSClient({ region });
-
-      // Get account identity first (this often works better for credentials)
-      const callerIdentity = await stsClient.send(
-        new GetCallerIdentityCommand({})
-      );
-      const accountId = callerIdentity.Account;
-
-      console.log(`Account ID: ${accountId}`);
-
-      // Create IoT client with same region and credentials
-      const iotClient = new IoTClient({ region });
-
-      // Get the IoT endpoint
-      const endpointResponse = await iotClient.send(
-        new DescribeEndpointCommand({
-          endpointType: "iot:Data-ATS", // ATS endpoint for device connections
-        })
-      );
-
-      if (!endpointResponse.endpointAddress) {
-        throw new Error("Could not retrieve IoT Core endpoint address");
-      }
-
-      const endpoint = endpointResponse.endpointAddress;
-      console.log(`Retrieved IoT Core endpoint: ${endpoint}`);
-
+    if (lambdaResponse.success && lambdaResponse.endpoint) {
       return NextResponse.json({
         success: true,
-        endpoint,
-        region,
-        accountId,
-        websocketUrl: `wss://${endpoint}/mqtt`,
-        message: "IoT endpoint retrieved successfully using direct AWS SDK",
+        endpoint: lambdaResponse.endpoint,
+        region: lambdaResponse.region,
+        accountId: lambdaResponse.accountId,
+        websocketUrl: lambdaResponse.websocketUrl,
+        message: "IoT endpoint retrieved successfully via Lambda",
       });
-    } catch (directError) {
-      console.log(
-        "❌ Direct AWS SDK failed, trying Lambda fallback...",
-        directError
-      );
-
-      // Fallback to Lambda function (which has proper IAM permissions)
-      try {
-        const lambdaResponse = await invokeLambda(
-          "getIoTEndpointFunctionName",
-          {}
-        );
-
-        if (!lambdaResponse.success || !lambdaResponse.endpoint) {
-          throw new Error(lambdaResponse.error || "Lambda function failed");
-        }
-
-        return NextResponse.json({
-          success: true,
-          endpoint: lambdaResponse.endpoint,
-          region: lambdaResponse.region,
-          websocketUrl: lambdaResponse.websocketUrl,
-          message: "IoT endpoint retrieved successfully via Lambda fallback",
-        });
-      } catch (lambdaError) {
-        console.error("❌ Lambda fallback also failed:", lambdaError);
-        throw lambdaError;
-      }
     }
-  } catch (error) {
-    console.error("❌ Error getting IoT endpoint:", error);
+
+    throw new Error(lambdaResponse.error || "Lambda function failed");
+  } catch (lambdaError) {
+    console.log(
+      "❌ Lambda approach failed, trying direct AWS SDK fallback...",
+      lambdaError
+    );
+  }
+
+  // Fallback to direct AWS SDK approach
+  try {
+    // Get region from environment variable as fallback only
+    const region =
+      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+    console.log(`Using fallback region: ${region}`);
+
+    // Create STS client to get account identity
+    const stsClient = new STSClient({ region });
+    const callerIdentity = await stsClient.send(
+      new GetCallerIdentityCommand({})
+    );
+    const accountId = callerIdentity.Account;
+    console.log(`Account ID: ${accountId}`);
+
+    // Create IoT client and get endpoint
+    const iotClient = new IoTClient({ region });
+    const endpointResponse = await iotClient.send(
+      new DescribeEndpointCommand({
+        endpointType: "iot:Data-ATS",
+      })
+    );
+
+    if (!endpointResponse.endpointAddress) {
+      throw new Error("Could not retrieve IoT Core endpoint address");
+    }
+
+    const endpoint = endpointResponse.endpointAddress;
+    console.log(`Retrieved IoT Core endpoint: ${endpoint}`);
+
+    return NextResponse.json({
+      success: true,
+      endpoint,
+      region,
+      accountId,
+      websocketUrl: `wss://${endpoint}/mqtt`,
+      message:
+        "IoT endpoint retrieved successfully using direct AWS SDK fallback",
+    });
+  } catch (directError) {
+    console.error(
+      "❌ Both Lambda and direct AWS SDK approaches failed:",
+      directError
+    );
 
     return NextResponse.json(
       {
         success: false,
         error: "Failed to get IoT endpoint",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details:
+          directError instanceof Error ? directError.message : "Unknown error",
       },
       { status: 500 }
     );

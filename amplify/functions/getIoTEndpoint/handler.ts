@@ -1,11 +1,25 @@
 import { IoTClient, DescribeEndpointCommand } from "@aws-sdk/client-iot";
+import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 
 export const handler = async (event: any) => {
   console.log("getIoTEndpoint Lambda invoked");
 
   try {
-    // Initialize IoT client
-    const iotClient = new IoTClient({ region: "us-east-1" });
+    // Get the region from AWS environment variable
+    const region =
+      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+    console.log(`Using region: ${region}`);
+
+    // Get account ID using STS
+    const stsClient = new STSClient({ region });
+    const callerIdentity = await stsClient.send(
+      new GetCallerIdentityCommand({})
+    );
+    const accountId = callerIdentity.Account;
+    console.log(`Account ID: ${accountId}`);
+
+    // Initialize IoT client with dynamic region
+    const iotClient = new IoTClient({ region });
 
     // Get the IoT Core endpoint
     const endpointResponse = await iotClient.send(
@@ -19,14 +33,17 @@ export const handler = async (event: any) => {
     }
 
     const endpoint = endpointResponse.endpointAddress;
-    console.log(`Retrieved IoT Core endpoint: ${endpoint}`);
+    console.log(
+      `Retrieved IoT Core endpoint: ${endpoint} in region: ${region}`
+    );
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
         endpoint,
-        region: "us-east-1",
+        region,
+        accountId,
         websocketUrl: `wss://${endpoint}/mqtt`,
         message: "IoT endpoint retrieved successfully",
       }),

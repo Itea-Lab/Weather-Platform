@@ -6,7 +6,7 @@ import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/AuthContext";
-import PubSubInitializer from "@/components/PubSubInitializer";
+import PubSubInitializer from "@/config/PubSubInitializer";
 import { useEffect } from "react";
 
 const geistSans = Geist({

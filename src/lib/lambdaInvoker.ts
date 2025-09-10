@@ -1,6 +1,12 @@
-import { InvokeCommand } from "@aws-sdk/client-lambda";
+import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { AddThingPayload } from "@/types/lambda";
-import { createLambdaClient } from "./awsConfig";
+
+// Create Lambda client with environment region (used internally by lambdaInvoker)
+function createLambdaClientWithEnvRegion(): LambdaClient {
+  const region =
+    process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+  return new LambdaClient({ region });
+}
 
 // Server-side function that can read amplify outputs for add thing
 export async function getAmplifyFunctionName(): Promise<string> {
@@ -40,8 +46,8 @@ export async function getAmplifyDeleteFunctionName(): Promise<string> {
 // Server-side Lambda invocation for adding things (for use in API routes)
 export async function invokeAddThingLambdaServerSide(payload: AddThingPayload) {
   try {
-    // Get pre-configured Lambda client with correct region
-    const lambdaClient = await createLambdaClient();
+    // Get pre-configured Lambda client with environment region
+    const lambdaClient = createLambdaClientWithEnvRegion();
 
     // Get the actual function name from amplify outputs
     const functionName = await getAmplifyFunctionName();
@@ -72,8 +78,8 @@ export async function invokeDeleteThingLambdaServerSide(payload: {
   thingName: string;
 }) {
   try {
-    // Get pre-configured Lambda client with correct region
-    const lambdaClient = await createLambdaClient();
+    // Get pre-configured Lambda client with environment region
+    const lambdaClient = createLambdaClientWithEnvRegion();
 
     // Get the actual function name from amplify outputs
     const functionName = await getAmplifyDeleteFunctionName();
@@ -102,8 +108,8 @@ export async function invokeDeleteThingLambdaServerSide(payload: {
 // Generic Lambda invoker function
 export async function invokeLambda(functionNameKey: string, payload: any) {
   try {
-    // Get pre-configured Lambda client with correct region
-    const lambdaClient = await createLambdaClient();
+    // Get pre-configured Lambda client with environment region
+    const lambdaClient = createLambdaClientWithEnvRegion();
 
     // Get the actual function name from amplify outputs
     const amplifyOutputs = await import("../../amplify_outputs.json");
