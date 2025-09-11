@@ -102,7 +102,7 @@ export default function RecentActivityCard() {
       </div>
       <div className="mt-6">
         <Link
-          href="/platform/notification"
+          href="/notification"
           className="text-indigo-600 hover:text-indigo-800 transition-colors"
         >
           View All Activities

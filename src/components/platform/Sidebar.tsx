@@ -19,21 +19,21 @@ export default function Sidebar() {
   const menuItems = [
     {
       name: "Home",
-      path: "/platform",
+      path: "/home",
       icon: <House />,
     },
     {
       name: "Notification",
-      path: "/platform/notification",
+      path: "/notification",
       icon: <MessageSquareDot />,
     },
-    { name: "Devices", path: "/platform/devices", icon: <Cpu /> },
+    { name: "Devices", path: "/devices", icon: <Cpu /> },
     {
       name: "Dashboard",
-      path: "/platform/dashboard",
+      path: "/dashboard",
       icon: <LayoutDashboard />,
     },
-    { name: "Dataset", path: "/platform/dataset", icon: <Database /> },
+    { name: "Dataset", path: "/dataset", icon: <Database /> },
   ];
 
   const isActivePath = (path: string) => {

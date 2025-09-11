@@ -1,6 +1,14 @@
 # AWS Amplify Gen 2 Setup Documentation
 
-This directory contains comprehensive setup guides for AWS Amplify Generation 2 backend components.
+This directory contains comprehensive setup guides for AWS Amplify Generation 2 backend components with CDK-based custom constructs.
+
+## Architecture Overview
+
+Our Weather Platform uses a hybrid approach:
+
+- **Amplify Gen 2**: For authentication, Lambda functions, and deployment management
+- **CDK Custom Constructs**: For advanced infrastructure like S3 storage, Glue data pipeline, CloudFront CDN, and EventBridge scheduling
+- **No Circular Dependencies**: Clean separation eliminates CloudFormation conflicts
 
 ## Setup Guides
 
@@ -10,12 +18,17 @@ This directory contains comprehensive setup guides for AWS Amplify Generation 2 
 - [Lambda Functions Setup](./create_function.md) - Complete guide for creating and deploying Lambda functions
 - [Authentication Setup](./authentication/README.md) - AWS Cognito authentication configuration
 - [API Gateway Setup](./create_api_gateway.md) - RESTful API and GraphQL setup
-- [Storage Setup](./create_storage.md) - S3 and database configuration
+- [CDK Storage Setup](./create_storage.md) - S3 bucket configuration using CDK constructs
 
 ### Data Processing Pipeline
 
-- [AWS Glue Setup](./setup_glue/README.md) - Data cataloging and ETL operations
-- [CloudFront Distribution](./setup_cloudfront/README.md) - CDN setup for dataset distribution
+- [AWS Glue Setup](./setup_glue/README.md) - CDK-based Glue data cataloging and ETL operations
+- [CloudFront Distribution](./setup_cloudfront/README.md) - CDK-based CDN setup for global dataset distribution
+
+### Advanced Infrastructure
+
+- [EventBridge Scheduling](./setup_eventbridge/README.md) - Weekly data processing automation
+- [Custom CDK Constructs](./custom_constructs/README.md) - Weather-specific infrastructure components
 
 ### Configuration
 

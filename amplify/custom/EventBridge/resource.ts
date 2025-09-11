@@ -22,17 +22,17 @@ export class CustomEventBridge extends Construct {
 
     const { accountId, region, crawlerName } = props;
 
-    // Create EventBridge rule for midnight UTC+7 (17:00 UTC)
+    // Create EventBridge rule for midnight UTC+7 (17:00 UTC) every Sunday
     this.rule = new events.Rule(this, "WeatherDataProcessingRule", {
       ruleName: "WeatherDataProcessingRule",
       description:
-        "Triggers weather data processing pipeline at midnight UTC+7",
+        "Triggers weather data processing pipeline at midnight UTC+7 every Sunday",
       schedule: events.Schedule.cron({
         minute: "0",
         hour: "17", // 17:00 UTC = 00:00 UTC+7
-        day: "*",
         month: "*",
         year: "*",
+        weekDay: "SUN", // Sunday
       }),
     });
 

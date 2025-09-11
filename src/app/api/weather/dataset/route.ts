@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
 
     // Prepare the payload for the Lambda function
     const payload = {
-      bucketName: outputs.storage.bucket_name,
-      cloudFrontDomain: outputs.custom.weatherCdnDomainName,
+      bucketName: outputs.custom.weatherDatasetBucketName,
+      cloudFrontDomain: outputs.custom.weatherCdnDomainName || undefined,
       district: district || undefined,
     };
 
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare the payload for the Lambda function
     const payload = {
-      bucketName: outputs.storage.bucket_name,
-      cloudFrontDomain: outputs.custom.weatherCdnDomainName,
+      bucketName: outputs.custom.weatherDatasetBucketName,
+      cloudFrontDomain: outputs.custom.weatherCdnDomainName || undefined,
       district: district || undefined,
     };
 

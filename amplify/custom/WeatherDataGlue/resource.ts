@@ -57,6 +57,8 @@ export class CustomWeatherDataGlue extends Construct {
           `arn:aws:s3:::${sourceBucketName}/*`,
           `arn:aws:s3:::${targetBucketName}`,
           `arn:aws:s3:::${targetBucketName}/*`,
+          `arn:aws:s3:::itea-weather-data-lake-storage`, // Access to hardcoded script bucket
+          `arn:aws:s3:::itea-weather-data-lake-storage/glue-scripts/*`, // Specific access to glue-scripts folder
         ],
       })
     );
@@ -187,7 +189,7 @@ export class CustomWeatherDataGlue extends Construct {
       role: glueRole.roleArn,
       command: {
         name: "glueetl",
-        scriptLocation: `s3://${targetBucketName}/glue-scripts/weather-transform.py`,
+        scriptLocation: `s3://itea-weather-data-lake-storage/glue-scripts/weather-transform.py`,
         pythonVersion: "3",
       },
       defaultArguments: {

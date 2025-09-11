@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-      router.push("/platform");
+      router.push("/home");
     } catch (error) {
       throw error;
     }
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       setNeedsPasswordChange(false);
-      router.push("/platform");
+      router.push("/home");
     } catch (error) {
       throw error;
     }

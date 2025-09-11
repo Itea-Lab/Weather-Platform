@@ -4,6 +4,66 @@
 
 AWS Glue provides the data cataloging and ETL capabilities for the Weather Platform. It consists of a Glue Database, Crawler, and ETL Job that work together to process raw IoT telemetry data into structured datasets.
 
+This implementation uses **CDK Custom Constructs** for better integration with the Weather Platform's hybrid architecture and specific IAM permissions for enhanced security.
+
+## CDK Implementation
+
+The Glue pipeline is implemented as a CDK custom construct in `amplify/custom/WeatherDataGlue/resource.ts`:
+
+```typescript
+// Create Glue Database
+const glueDatabase = new CfnDatabase(stack, "WeatherGlueDatabase", {
+  catalogId: stack.account,
+  databaseInput: {
+    name: `weather_data_catalog_${randomId}`,
+    description: "Database for weather platform telemetry data",
+  },
+});
+
+// IAM Role with specific permissions
+const glueRole = new Role(stack, "WeatherGlueServiceRole", {
+  assumedBy: new ServicePrincipal("glue.amazonaws.com"),
+  managedPolicies: [
+    ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSGlueServiceRole"),
+  ],
+  inlinePolicies: {
+    GlueS3Access: new PolicyDocument({
+      statements: [
+        // Specific script folder access for security
+        new PolicyStatement({
+          sid: "AllowGlueScriptAccess",
+          effect: Effect.ALLOW,
+          actions: ["s3:GetObject", "s3:ListBucket"],
+          resources: [
+            "arn:aws:s3:::itea-weather-data-lake-storage",
+            "arn:aws:s3:::itea-weather-data-lake-storage/glue-scripts/*",
+          ],
+        }),
+      ],
+    }),
+  },
+});
+
+// Glue Job with hardcoded script location
+const glueJob = new CfnJob(stack, "WeatherDataTransformJob", {
+  role: glueRole.roleArn,
+  command: {
+    name: "glueetl",
+    scriptLocation:
+      "s3://itea-weather-data-lake-storage/glue-scripts/weather-transform.py",
+    pythonVersion: "3",
+  },
+  // ... additional configuration
+});
+```
+
+### Key CDK Benefits
+
+- **Specific IAM Permissions**: Access only to required S3 folders
+- **Hardcoded Script Location**: No dependency on dynamic bucket references
+- **Integration with CDK Storage**: Direct references to CDK-created buckets
+- **Resource Tagging**: Proper organization and cost tracking
+
 ## Components
 
 ### 1. Glue Database
@@ -97,9 +157,10 @@ The crawler automatically detects schema from JSON files with structure:
 
 ### Script Location
 
-- **S3 Path**: `s3://{target-bucket}/glue-scripts/weather-transform.py`
+- **S3 Path**: `s3://itea-weather-data-lake-storage/glue-scripts/weather-transform.py`
 - **Language**: Python
 - **Framework**: PySpark with AWS Glue libraries
+- **Access Pattern**: Read-only access to specific glue-scripts/ folder for security
 
 ### Job Arguments
 
@@ -186,11 +247,25 @@ timestamp,location,temperature,humidity,pressure,wind_direction,avg_wind_speed,m
 
 The ETL job requires comprehensive permissions:
 
-#### S3 Access
+#### S3 Access (Specific Script Folder)
 
 ```json
 {
-  "Sid": "AllowS3ReadAccess",
+  "Sid": "AllowGlueScriptAccess",
+  "Effect": "Allow",
+  "Actions": ["s3:GetObject", "s3:ListBucket"],
+  "Resources": [
+    "arn:aws:s3:::itea-weather-data-lake-storage",
+    "arn:aws:s3:::itea-weather-data-lake-storage/glue-scripts/*"
+  ]
+}
+```
+
+#### S3 Source and Target Access
+
+```json
+{
+  "Sid": "AllowS3DataAccess",
   "Effect": "Allow",
   "Actions": ["s3:GetObject", "s3:ListBucket", "s3:GetBucketLocation"],
   "Resources": [

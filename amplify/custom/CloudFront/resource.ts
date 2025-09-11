@@ -1,11 +1,14 @@
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 import { CfnOutput, Stack } from "aws-cdk-lib";
 
 export interface CustomCloudFrontProps {
   storageBucketName: string;
   storageBucketDomainName: string;
+  // Optional: Pass the bucket reference for direct access
+  storageBucket?: s3.IBucket;
 }
 
 export class CustomCloudFront extends Construct {
@@ -114,70 +117,52 @@ export class CustomCloudFront extends Construct {
       }
     );
 
-    // Create S3 Bucket Policy (mirrors cloudformation-template.json)
-    const bucketPolicy = new s3.CfnBucketPolicy(this, "S3BucketPolicy", {
-      bucket: props.storageBucketName,
-      policyDocument: {
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Sid: "AllowCloudFrontGetObject",
-            Effect: "Allow",
-            Principal: { Service: "cloudfront.amazonaws.com" },
-            Action: "s3:GetObject",
-            Resource: `arn:aws:s3:::${props.storageBucketName}/*`,
-            Condition: {
-              StringEquals: {
-                "AWS:SourceArn": `arn:aws:cloudfront::${stack.account}:distribution/${this.distribution.ref}`,
-              },
+    // Grant CloudFront access to the bucket using Origin Access Control
+    if (props.storageBucket) {
+      // Use CDK bucket methods to grant access
+      props.storageBucket.grantRead(
+        new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+        "dataset/*" // Only allow access to dataset folder
+      );
+
+      // Add additional statement for CloudFront distribution specific access
+      props.storageBucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          sid: "AllowCloudFrontOAC",
+          effect: iam.Effect.ALLOW,
+          principals: [new iam.ServicePrincipal("cloudfront.amazonaws.com")],
+          actions: ["s3:GetObject"],
+          resources: [`${props.storageBucket.bucketArn}/dataset/*`],
+          conditions: {
+            StringEquals: {
+              "AWS:SourceArn": `arn:aws:cloudfront::${stack.account}:distribution/${this.distribution.ref}`,
             },
           },
-          {
-            Sid: "AllowAccountListBucketForPrefixes",
-            Effect: "Allow",
-            Principal: "*",
-            Action: ["s3:ListBucket"],
-            Resource: `arn:aws:s3:::${props.storageBucketName}`,
-            Condition: {
-              StringLike: {
-                "aws:PrincipalArn": `arn:aws:iam::${stack.account}:*`,
-                "s3:prefix": ["dataset/*", "glue-scripts/*"],
+        })
+      );
+    } else {
+      // Fallback: Create bucket policy for cases where bucket reference is not available
+      const bucketPolicy = new s3.CfnBucketPolicy(this, "S3BucketPolicy", {
+        bucket: props.storageBucketName,
+        policyDocument: {
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Sid: "AllowCloudFrontGetObject",
+              Effect: "Allow",
+              Principal: { Service: "cloudfront.amazonaws.com" },
+              Action: "s3:GetObject",
+              Resource: `arn:aws:s3:::${props.storageBucketName}/dataset/*`,
+              Condition: {
+                StringEquals: {
+                  "AWS:SourceArn": `arn:aws:cloudfront::${stack.account}:distribution/${this.distribution.ref}`,
+                },
               },
             },
-          },
-          {
-            Sid: "AllowAccountGetObjectForDatasetAndGlueScripts",
-            Effect: "Allow",
-            Principal: "*",
-            Action: ["s3:GetObject"],
-            Resource: [
-              `arn:aws:s3:::${props.storageBucketName}/dataset/*`,
-              `arn:aws:s3:::${props.storageBucketName}/glue-scripts/*`,
-            ],
-            Condition: {
-              StringLike: {
-                "aws:PrincipalArn": `arn:aws:iam::${stack.account}:*`,
-              },
-            },
-          },
-          {
-            Sid: "DenyExternalGetObjectExceptCloudFront",
-            Effect: "Deny",
-            Principal: "*",
-            Action: "s3:GetObject",
-            Resource: `arn:aws:s3:::${props.storageBucketName}/*`,
-            Condition: {
-              StringNotEquals: {
-                "AWS:SourceArn": `arn:aws:cloudfront::${stack.account}:distribution/${this.distribution.ref}`,
-              },
-              StringNotLike: {
-                "aws:PrincipalArn": `arn:aws:iam::${stack.account}:*`,
-              },
-            },
-          },
-        ],
-      },
-    });
+          ],
+        },
+      });
+    }
 
     // Set the public properties
     this.domainName = this.distribution.attrDomainName;

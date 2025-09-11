@@ -21,25 +21,25 @@ export default function ActionCard() {
       title: "Add Device",
       description: "Register a new device",
       icon: <Plus className="w-6 h-6 text-green-500" />,
-      to: "/platform/devices",
+      to: "/devices",
     },
     {
       title: "View Notifications",
       description: "Check your notifications",
       icon: <MessageSquareDot className="w-6 h-6 text-red-500" />,
-      to: "/platform/notification",
+      to: "/notification",
     },
     {
       title: "Manage Datasets",
       description: "Manage your datasets",
       icon: <Database className="w-6 h-6 text-purple-500" />,
-      to: "/platform/dataset",
+      to: "/dataset",
     },
     {
       title: "View Dashboard",
       description: "Monitor your real-time data",
       icon: <BarChart3 className="w-6 h-6 text-blue-500" />,
-      to: "/platform/dashboard",
+      to: "/dashboard",
     },
   ];
   return (
