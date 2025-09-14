@@ -3,6 +3,7 @@ import { PubSub } from "@aws-amplify/pubsub";
 import { cardData, WindData, RainData } from "@/types/sensorData";
 import { iotConfigManager, getWeatherTopic } from "@/lib/iotConfig";
 import { useTopicContext } from "@/hooks/TopicContext";
+import { deviceStatusMonitor } from "@/lib/deviceStatusMonitor";
 
 interface WeatherMessage {
   deviceId: string;
@@ -126,6 +127,16 @@ export function useIoT() {
                 deviceId: messageData?.deviceId,
                 timestamp: messageData?.timestamp,
               });
+
+              // Record device activity for status monitoring
+              if (messageData?.deviceId && messageData?.timestamp) {
+                const district = selectedTopic || "unknown";
+                deviceStatusMonitor.recordDeviceActivity(
+                  messageData.deviceId,
+                  district,
+                  messageData.timestamp
+                );
+              }
 
               const { weatherCardData, windChartData, rainChartData } =
                 transformMessage(messageData);

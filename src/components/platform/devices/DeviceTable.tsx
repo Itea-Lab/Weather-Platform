@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useDevices, deleteDevice } from "@/lib/api";
+import { deleteDevice } from "@/lib/api";
+import { useDevicesWithStatus } from "@/hooks/useDevicesWithStatus";
 import DeviceFilter from "./DeviceFilter";
 import { Loader2, AlertCircle, Trash2 } from "lucide-react";
 
@@ -77,7 +78,7 @@ function DeleteConfirmDialog({
 }
 
 export default function DeviceTable() {
-  const { devices, isLoading, error, mutate } = useDevices();
+  const { devices, isLoading, error, mutate } = useDevicesWithStatus();
   const [groupFilter, setGroupFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -90,7 +91,8 @@ export default function DeviceTable() {
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       const matchesGroup = !groupFilter || device.group === groupFilter;
-      const matchesStatus = !statusFilter || device.status === statusFilter;
+      const matchesStatus =
+        !statusFilter || device.realTimeStatus === statusFilter;
       return matchesGroup && matchesStatus;
     });
   }, [devices, groupFilter, statusFilter]);
@@ -227,18 +229,16 @@ export default function DeviceTable() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            device.status === "online"
+                            device.realTimeStatus === "online"
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {device.status}
+                          {device.realTimeStatus}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {device.lastSeen
-                          ? new Date(device.lastSeen).toLocaleString()
-                          : "N/A"}
+                        {device.timeSinceUpdate}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {device.signalStrength !== 0

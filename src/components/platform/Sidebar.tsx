@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/AuthContext";
+import { useNotifications } from "@/hooks/NotificationContext";
 import {
   House,
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { unreadCount, isLoading } = useNotifications();
 
   const menuItems = [
     {
@@ -71,6 +73,19 @@ export default function Sidebar() {
                 >
                   <span className="mr-3 flex-shrink-0">{item.icon}</span>
                   <span className="truncate">{item.name}</span>
+                  {item.path === "/notification" && (
+                    <>
+                      {isLoading ? (
+                        <div className="ml-auto w-5 h-5 bg-gray-400 rounded-full animate-pulse"></div>
+                      ) : (
+                        unreadCount > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        )
+                      )}
+                    </>
+                  )}
                 </Link>
               </li>
             ))}

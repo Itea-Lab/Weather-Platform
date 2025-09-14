@@ -1,6 +1,7 @@
 import AddDeviceButton from "@/components/platform/devices/addDeviceButton";
 import DeviceTable from "@/components/platform/devices/DeviceTable";
 import DeviceStatusCard from "@/components/platform/devices/DeviceStatusCard";
+import DeviceMonitoringStatus from "@/components/platform/DeviceMonitoringStatus";
 
 export const metadata = {
   title: "Devices",
@@ -22,6 +23,9 @@ export default function DevicesPage() {
           </div>
         </div>
       </div>
+
+      {/* Real-time Device Monitoring */}
+      <DeviceMonitoringStatus />
 
       {/* Device status cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

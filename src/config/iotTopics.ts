@@ -16,10 +16,15 @@ export const IOT_TOPICS = {
   DISTRICT_6: "weatherPlatform/telemetry/district6",
   DISTRICT_1: "weatherPlatform/telemetry/district1",
 
+  // Notification topics for device status and alerts
+  // NOTE: The platform publishes device status updates to this topic automatically
+  // when devices go offline/online based on telemetry monitoring
+  NOTIFICATIONS: "weatherPlatform/notifications",
+
   // Alert topics (if needed in future)
   WEATHER_ALERTS: "weatherPlatform/alerts/+",
 
-  // Status topics
+  // Legacy status topics (keeping for backward compatibility)
   DEVICE_STATUS: "weatherPlatform/status/+",
 } as const;
 

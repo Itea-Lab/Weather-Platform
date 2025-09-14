@@ -1,8 +1,8 @@
 "use client";
 
-import WeatherCard from "@/components/platform/DataCard";
-import WindChart from "@/components/platform/WindChart";
-import RainChart from "@/components/platform/RainChart";
+import WeatherCard from "@/components/platform/dashboard/DataCard";
+import WindChart from "@/components/platform/dashboard/WindChart";
+import RainChart from "@/components/platform/dashboard/RainChart";
 import TopicSelector from "@/components/platform/TopicSelector";
 import { useIoT } from "@/hooks/useIoT";
 
