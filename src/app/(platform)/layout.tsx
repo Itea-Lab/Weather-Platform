@@ -22,7 +22,11 @@ export default function DashboardLayout({
           <TelemetryProvider>
             <div className="flex min-h-screen bg-gray-100">
               <Sidebar />
-              <div className="flex-1 p-8 overflow-x-hidden">{children}</div>
+              <div className="flex-1 lg:ml-0 p-4 lg:p-8 overflow-x-hidden">
+                <div className="lg:hidden h-16"></div>{" "}
+                {/* Spacer for mobile menu button */}
+                {children}
+              </div>
             </div>
           </TelemetryProvider>
         </NotificationProvider>

@@ -15,8 +15,11 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function NotificationPage() {
+  usePageTitle("Notifications");
+
   const {
     notifications,
     unreadCount,

@@ -6,8 +6,11 @@ import LoginForm from "@/components/auth/LoginForm";
 import Link from "next/link";
 import { useAuth } from "@/hooks/AuthContext";
 import { useRouter } from "next/navigation";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Home() {
+  usePageTitle("Login");
+
   const { user, loading } = useAuth();
   const router = useRouter();
 

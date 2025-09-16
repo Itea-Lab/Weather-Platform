@@ -5,21 +5,26 @@ import WindChart from "@/components/platform/dashboard/WindChart";
 import RainChart from "@/components/platform/dashboard/RainChart";
 import TopicSelector from "@/components/platform/dashboard/TopicSelector";
 import { useTelemetry } from "@/hooks/TelemetryContext";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function DashboardPage() {
+  usePageTitle("Dashboard");
+
   // Use global telemetry context instead of local hook
   const { weatherData, windData, rainData, error, isLoading, isConnected } =
     useTelemetry();
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Weather Dashboard</h1>
-        <TopicSelector />
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Weather Dashboard</h1>
+        <div className="w-full sm:w-auto">
+          <TopicSelector />
+        </div>
       </div>
 
       <section>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           <WeatherCard
             title="Temperature"
             dataKey="temperature"
@@ -54,8 +59,8 @@ export default function DashboardPage() {
       </section>
       {/* More dashboard content */}
       <section className="my-4">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-1/3 space-y-6">
+        <div className="flex flex-col xl:flex-row gap-4 sm:gap-6">
+          <div className="xl:w-1/3 space-y-4 sm:space-y-6">
             <WeatherCard
               title="Wind Speed"
               dataKey="avgWindSpeed"
@@ -88,7 +93,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="lg:w-2/3">
+          <div className="xl:w-2/3">
             <WindChart></WindChart>
           </div>
         </div>
