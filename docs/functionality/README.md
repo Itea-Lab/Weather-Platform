@@ -27,7 +27,7 @@
 - **Live Weather Data**: Temperature, humidity, pressure, wind, rainfall
 - **Multiple Visualizations**: Cards, charts, and real-time indicators
 - **Connection Status**: Visual feedback for IoT connection health
-- **Offline Detection**: Stale data indicators with 3-second threshold
+- **Smart Device Monitoring**: UI indicators respond within 3 seconds, notifications sent after 30 seconds offline
 - **Error Handling**: Graceful degradation and error recovery
 
 ### Dynamic Topic Switching
@@ -47,7 +47,9 @@
 
 ### Performance Optimization
 
-- **Single Hook Architecture**: Centralized IoT data management
+- **Shared Connection Management**: Single WebSocket connection for all subscriptions
+- **Consolidated Utilities**: Shared hooks and utilities for device status calculations
+- **React Optimization**: useMemo for expensive computations, useState+useEffect for real-time updates
 - **Memory Efficiency**: Proper subscription management
 - **Resource Optimization**: Shared data streams
 - **Professional Logging**: Clean console output with appropriate levels

@@ -3,6 +3,7 @@ import { IOT_TOPICS } from "@/config/iotTopics";
 import {
   isRecentActivity,
   DEVICE_OFFLINE_THRESHOLD,
+  DEVICE_NOTIFICATION_THRESHOLD,
 } from "./deviceStatusUtils";
 
 interface DeviceActivity {
@@ -17,7 +18,8 @@ export class DeviceStatusMonitor {
   private static instance: DeviceStatusMonitor;
   private deviceActivity: Map<string, DeviceActivity> = new Map();
   private monitoringInterval: NodeJS.Timeout | null = null;
-  private readonly OFFLINE_THRESHOLD = DEVICE_OFFLINE_THRESHOLD;
+  private readonly UI_OFFLINE_THRESHOLD = DEVICE_OFFLINE_THRESHOLD; // 3s for UI indicators
+  private readonly NOTIFICATION_THRESHOLD = DEVICE_NOTIFICATION_THRESHOLD; // 30s for notifications
   private readonly CHECK_INTERVAL = 1000; // Check every second
 
   private constructor() {}
@@ -83,13 +85,14 @@ export class DeviceStatusMonitor {
     this.deviceActivity.forEach((activity, deviceId) => {
       const timeSinceLastSeen = now.getTime() - activity.lastSeen.getTime();
 
-      // Device went offline
+      // Update UI status (quick response for visual indicators)
+      activity.isOnline = timeSinceLastSeen <= this.UI_OFFLINE_THRESHOLD;
+
+      // Send notification only after longer threshold
       if (
-        timeSinceLastSeen > this.OFFLINE_THRESHOLD &&
-        activity.isOnline &&
+        timeSinceLastSeen > this.NOTIFICATION_THRESHOLD &&
         !activity.offlineNotificationSent
       ) {
-        activity.isOnline = false;
         activity.offlineNotificationSent = true;
 
         this.publishDeviceStatusNotification(
@@ -121,10 +124,10 @@ export class DeviceStatusMonitor {
     };
 
     try {
-      console.log(
-        `Publishing ${status} notification for device ${deviceId}:`,
-        notification
-      );
+      // console.log(
+      //   `Publishing ${status} notification for device ${deviceId}:`,
+      //   notification
+      // );
 
       await sharedPubSubManager.publish(IOT_TOPICS.NOTIFICATIONS, notification);
 

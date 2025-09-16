@@ -12,9 +12,23 @@ export const IOT_TOPICS = {
   WEATHER_TELEMETRY_ALL: "weatherPlatform/telemetry/+",
 
   // Specific device topics by district
+  DISTRICT_1: "weatherPlatform/telemetry/district1",
+  DISTRICT_2: "weatherPlatform/telemetry/district2",
+  DISTRICT_3: "weatherPlatform/telemetry/district3",
+  DISTRICT_4: "weatherPlatform/telemetry/district4",
   DISTRICT_5: "weatherPlatform/telemetry/district5",
   DISTRICT_6: "weatherPlatform/telemetry/district6",
-  DISTRICT_1: "weatherPlatform/telemetry/district1",
+  DISTRICT_7: "weatherPlatform/telemetry/district7",
+  DISTRICT_8: "weatherPlatform/telemetry/district8",
+  DISTRICT_9: "weatherPlatform/telemetry/district9",
+  DISTRICT_10: "weatherPlatform/telemetry/district10",
+  DISTRICT_11: "weatherPlatform/telemetry/district11",
+  DISTRICT_12: "weatherPlatform/telemetry/district12",
+  DISTRICT_BT: "weatherPlatform/telemetry/districtBT", //Bình Thạnh
+  DISTRICT_TP: "weatherPlatform/telemetry/districtTP", //Tân Phú
+  DISTRICT_TB: "weatherPlatform/telemetry/districtTB", //Tân Bình
+  DISTRICT_GV: "weatherPlatform/telemetry/districtGV", //Gò Vấp
+  DISTRICT_PN: "weatherPlatform/telemetry/districtPN", //Phú Nhuận
 
   // Notification topics for device status and alerts
   // NOTE: The platform publishes device status updates to this topic automatically

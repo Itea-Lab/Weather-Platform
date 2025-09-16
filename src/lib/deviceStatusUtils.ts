@@ -9,7 +9,9 @@ export interface DeviceStatus {
   secondsOffline: number;
 }
 
-export const DEVICE_OFFLINE_THRESHOLD = 3000; // 3 seconds
+// Device status thresholds
+export const DEVICE_OFFLINE_THRESHOLD = 3000; // 3 seconds - for UI indicators (quick feedback)
+export const DEVICE_NOTIFICATION_THRESHOLD = 30000; // 30 seconds - for notifications (avoid spam)
 
 /**
  * Determines if a timestamp indicates the device is offline

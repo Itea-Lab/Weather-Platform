@@ -10,6 +10,42 @@ This document explains how we implemented dynamic topic subscription in the Weat
 User Selection → Topic Context → IoT Config → PubSub Client → Live Data
 ```
 
+## Station Location Codes
+
+The platform supports multiple weather stations across Ho Chi Minh City districts:
+
+| Station Code | Station Name        | IoT Topic                              |
+| ------------ | ------------------- | -------------------------------------- |
+| `district1`  | District 1 Station  | `weatherPlatform/telemetry/district1`  |
+| `district2`  | District 2 Station  | `weatherPlatform/telemetry/district2`  |
+| `district3`  | District 3 Station  | `weatherPlatform/telemetry/district3`  |
+| `district4`  | District 4 Station  | `weatherPlatform/telemetry/district4`  |
+| `district5`  | District 5 Station  | `weatherPlatform/telemetry/district5`  |
+| `district6`  | District 6 Station  | `weatherPlatform/telemetry/district6`  |
+| `district7`  | District 7 Station  | `weatherPlatform/telemetry/district7`  |
+| `district8`  | District 8 Station  | `weatherPlatform/telemetry/district8`  |
+| `district9`  | District 9 Station  | `weatherPlatform/telemetry/district9`  |
+| `district10` | District 10 Station | `weatherPlatform/telemetry/district10` |
+| `district11` | District 11 Station | `weatherPlatform/telemetry/district11` |
+| `district12` | District 12 Station | `weatherPlatform/telemetry/district12` |
+| `districtBT` | Bình Thạnh Station  | `weatherPlatform/telemetry/districtBT` |
+| `districtTP` | Tân Phú Station     | `weatherPlatform/telemetry/districtTP` |
+| `districtTB` | Tân Bình Station    | `weatherPlatform/telemetry/districtTB` |
+| `districtGV` | Gò Vấp Station      | `weatherPlatform/telemetry/districtGV` |
+| `districtPN` | Phú Nhuận Station   | `weatherPlatform/telemetry/districtPN` |
+
+### IoT Topic Structure
+
+```
+weatherPlatform/telemetry/{stationCode}
+```
+
+**Examples:**
+
+- `weatherPlatform/telemetry/district1`
+- `weatherPlatform/telemetry/districtBT`
+- `weatherPlatform/telemetry/districtTP`
+
 ## Implementation Components
 
 ### 1. Topic Context Provider
@@ -26,28 +62,31 @@ interface TopicOption {
 
 const availableTopics: TopicOption[] = [
   {
-    value: "hcmc",
-    label: "Ho Chi Minh City",
-    description: "Southern Vietnam",
-    location: "10.8231° N, 106.6297° E",
+    value: "district1",
+    label: "District 1 Station",
+    description: "weatherPlatform/telemetry/district1",
   },
   {
-    value: "hanoi",
-    label: "Hanoi",
-    description: "Northern Vietnam",
-    location: "21.0285° N, 105.8542° E",
+    value: "districtBT",
+    label: "Bình Thạnh Station",
+    description: "weatherPlatform/telemetry/districtBT",
   },
-  // ... more topics
+  {
+    value: "districtTP",
+    label: "Tân Phú Station",
+    description: "weatherPlatform/telemetry/districtTP",
+  },
+  // ... more district topics
 ];
 
 const TopicContext = createContext<TopicContextType | undefined>(undefined);
 
 export function TopicProvider({ children }: { children: React.ReactNode }) {
-  const [selectedTopic, setSelectedTopic] = useState<string>("hcmc");
+  const [selectedTopic, setSelectedTopic] = useState<string>("district5");
 
   // Persist selection in localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("selectedWeatherTopic");
+    const saved = localStorage.getItem("selectedIoTTopic");
     if (saved) {
       setSelectedTopic(saved);
     }
@@ -55,7 +94,7 @@ export function TopicProvider({ children }: { children: React.ReactNode }) {
 
   const contextSetSelectedTopic = (topic: string) => {
     setSelectedTopic(topic);
-    localStorage.setItem("selectedWeatherTopic", topic);
+    localStorage.setItem("selectedIoTTopic", topic);
     console.log("Topic changed to:", topic);
   };
 
@@ -142,11 +181,17 @@ export default function TopicSelector() {
 }
 ```
 
-**Features**:
+**Available Topics:**
 
-- **Visual Feedback**: Shows current selection with checkmark
-- **Cache Clearing**: Ensures clean state transitions
-- **Page Refresh**: Guarantees proper reconnection
+| Station Code | Station Name       |
+| ------------ | ------------------ |
+| `district1`  | District 1 Station |
+| `district2`  | District 2 Station |
+| `districtBT` | Bình Thạnh Station |
+| `districtTP` | Tân Phú Station    |
+| `districtTB` | Tân Bình Station   |
+| `districtGV` | Gò Vấp Station     |
+| `districtPN` | Phú Nhuận Station  |
 
 ### 3. Dynamic IoT Configuration
 
@@ -157,7 +202,7 @@ export default function TopicSelector() {
 const iotConfigCache = new Map<string, any>();
 const weatherTopicCache = new Map<string, string>();
 
-export async function getIoTConfig(selectedTopic: string = "hcmc") {
+export async function getIoTConfig(selectedTopic: string = "district5") {
   // Check cache first
   if (iotConfigCache.has(selectedTopic)) {
     return iotConfigCache.get(selectedTopic);
@@ -193,7 +238,7 @@ export function getWeatherTopic(selectedTopic: string): string {
     return weatherTopicCache.get(selectedTopic)!;
   }
 
-  const topic = `weather/${selectedTopic}`;
+  const topic = `weatherPlatform/telemetry/${selectedTopic}`;
   weatherTopicCache.set(selectedTopic, topic);
   return topic;
 }
@@ -204,24 +249,79 @@ export function clearAllIoTCache(): void {
 }
 ```
 
-**Benefits**:
+**Topic Examples:**
 
-- **Caching**: Reduces API calls for repeated topic switches
-- **Error Handling**: Graceful failure with meaningful errors
-- **Cache Management**: Ability to clear cache for fresh connections
+- `getWeatherTopic("district1")` → `"weatherPlatform/telemetry/district1"`
+- `getWeatherTopic("districtBT")` → `"weatherPlatform/telemetry/districtBT"`
+- `getWeatherTopic("districtTP")` → `"weatherPlatform/telemetry/districtTP"`
+
+### 4. IoT Topics Configuration
+
+**File**: `src/config/iotTopics.ts`
+
+```typescript
+export const IOT_TOPICS = {
+  // Main weather telemetry topic pattern (use + for wildcard to catch all districts)
+  WEATHER_TELEMETRY_ALL: "weatherPlatform/telemetry/+",
+
+  // Specific device topics by district
+  DISTRICT_1: "weatherPlatform/telemetry/district1",
+  DISTRICT_2: "weatherPlatform/telemetry/district2",
+  DISTRICT_3: "weatherPlatform/telemetry/district3",
+  DISTRICT_4: "weatherPlatform/telemetry/district4",
+  DISTRICT_5: "weatherPlatform/telemetry/district5",
+  DISTRICT_6: "weatherPlatform/telemetry/district6",
+  DISTRICT_7: "weatherPlatform/telemetry/district7",
+  DISTRICT_8: "weatherPlatform/telemetry/district8",
+  DISTRICT_9: "weatherPlatform/telemetry/district9",
+  DISTRICT_10: "weatherPlatform/telemetry/district10",
+  DISTRICT_11: "weatherPlatform/telemetry/district11",
+  DISTRICT_12: "weatherPlatform/telemetry/district12",
+  DISTRICT_BT: "weatherPlatform/telemetry/districtBT", //Bình Thạnh
+  DISTRICT_TP: "weatherPlatform/telemetry/districtTP", //Tân Phú
+  DISTRICT_TB: "weatherPlatform/telemetry/districtTB", //Tân Bình
+  DISTRICT_GV: "weatherPlatform/telemetry/districtGV", //Gò Vấp
+  DISTRICT_PN: "weatherPlatform/telemetry/districtPN", //Phú Nhuận
+
+  // Notification topics for device status and alerts
+  NOTIFICATIONS: "weatherPlatform/notifications",
+} as const;
+```
+
+### Topic Mapping Table
+
+| Constant Name | Station Code | Full Topic                             |
+| ------------- | ------------ | -------------------------------------- |
+| `DISTRICT_1`  | `district1`  | `weatherPlatform/telemetry/district1`  |
+| `DISTRICT_2`  | `district2`  | `weatherPlatform/telemetry/district2`  |
+| `DISTRICT_3`  | `district3`  | `weatherPlatform/telemetry/district3`  |
+| `DISTRICT_4`  | `district4`  | `weatherPlatform/telemetry/district4`  |
+| `DISTRICT_5`  | `district5`  | `weatherPlatform/telemetry/district5`  |
+| `DISTRICT_BT` | `districtBT` | `weatherPlatform/telemetry/districtBT` |
+| `DISTRICT_TP` | `districtTP` | `weatherPlatform/telemetry/districtTP` |
+| `DISTRICT_TB` | `districtTB` | `weatherPlatform/telemetry/districtTB` |
+| `DISTRICT_GV` | `districtGV` | `weatherPlatform/telemetry/districtGV` |
+| `DISTRICT_PN` | `districtPN` | `weatherPlatform/telemetry/districtPN` |
+
+**Key Configuration Points:**
+
+- **Wildcard Subscription**: `weatherPlatform/telemetry/+` catches all district topics
+- **Individual Topics**: Each district has its own specific topic
+- **Notification System**: Separate topic for device status alerts
+- **Backward Compatibility**: Legacy status topics maintained
 
 ## Topic Switching Flow
 
 ### 1. User Interaction
 
 ```
-User clicks dropdown → Selects new topic → UI updates immediately
+User clicks dropdown → Selects "District 1 Station" → UI updates immediately
 ```
 
 ### 2. Context Update
 
 ```
-Topic Context → Updates selectedTopic → Saves to localStorage
+Topic Context → Updates selectedTopic to "district1" → Saves to localStorage
 ```
 
 ### 3. Hook Reactivation
@@ -233,13 +333,33 @@ useEffect dependency → Detects topic change → Triggers new subscription
 ### 4. Connection Management
 
 ```
-Old subscription cleanup → New IoT config → New PubSub connection
+Old subscription cleanup → New IoT config → New PubSub connection to "weatherPlatform/telemetry/district1"
 ```
 
 ### 5. Data Flow
 
 ```
-New MQTT topic → Real-time data → UI components update
+New MQTT topic → Real-time data from District 1 → UI components update
+```
+
+## Default Station Selection
+
+The platform defaults to **District 5 Station** (`district5`) if:
+
+1. No previous selection in localStorage
+2. Invalid topic stored in localStorage
+3. Context initialization without saved preference
+
+```typescript
+const [selectedTopic, setSelectedTopic] = useState<string>(() => {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("selectedIoTTopic");
+    if (saved && AVAILABLE_TOPICS.some((t) => t.value === saved)) {
+      return saved;
+    }
+  }
+  return IOT_TOPICS.DISTRICT_5; // Default fallback
+});
 ```
 
 ## Subscription Management
@@ -282,7 +402,7 @@ const selectedTopicInfo = availableTopics.find(
 
 if (!selectedTopicInfo) {
   // Fallback to default topic
-  setSelectedTopic("hcmc");
+  setSelectedTopic("district5");
 }
 ```
 
@@ -315,11 +435,11 @@ try {
 
    - Check context provider wrapping
    - Verify useEffect dependencies
-   - Clear browser cache/localStorage
+   - Clear browser cache/localStorage (key: `selectedIoTTopic`)
 
 2. **Data Not Updating**
 
-   - Confirm IoT device is publishing to new topic
+   - Confirm IoT device is publishing to new topic (e.g., `weatherPlatform/telemetry/district1`)
    - Check WebSocket connection status
    - Verify topic permissions in AWS IoT
 
@@ -336,4 +456,11 @@ console.log("Current topic:", selectedTopic);
 console.log("Available topics:", availableTopics);
 console.log("IoT config:", iotConfig);
 console.log("Generated topic:", getWeatherTopic(selectedTopic));
+
+// Example outputs:
+console.log("Generated topic for district1:", getWeatherTopic("district1"));
+// Output: "weatherPlatform/telemetry/district1"
+
+console.log("Generated topic for districtBT:", getWeatherTopic("districtBT"));
+// Output: "weatherPlatform/telemetry/districtBT"
 ```

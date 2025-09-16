@@ -1,215 +1,307 @@
-# Real-time Weather Dashboard with AWS Amplify PubSub
+# Real-time Weather Dashboard
 
 ## Overview
 
-This document explains how we implemented a real-time weather dashboard using AWS Amplify PubSub with IoT Core integration. The dashboard displays live weather data from IoT devices with dynamic topic subscription and optimized connection management.
+This document explains the implementation of a real-time weather dashboard using shared PubSub connections, global context management, and optimized device status monitoring. The dashboard provides live weather data with efficient resource usage and intelligent notification systems.
 
 ## Architecture Overview
 
 ```
-IoT Devices → AWS IoT Core → MQTT Topics → Amplify PubSub → Nextjs Dashboard
+IoT Devices → AWS IoT Core → MQTT Topics → Shared PubSub Manager → Global Contexts → React Components
 ```
 
 ### Key Components
 
 1. **AWS IoT Core**: Manages device connections and message routing
 2. **MQTT Topics**: Channel weather data from specific locations/devices
-3. **Amplify PubSub**: Client-side library for real-time subscriptions
-4. **React Hooks**: Custom hooks for data management and state
-5. **Topic Context**: Global state management for dynamic subscriptions
+3. **Shared PubSub Manager**: Single WebSocket connection for all subscriptions
+4. **Global Contexts**: TelemetryContext and NotificationContext for state management
+5. **Device Status Monitor**: Intelligent device monitoring with dual thresholds
+6. **Optimized Components**: React hooks with proper memoization strategies
 
 ## Implementation Details
 
-### 1. IoT Configuration Setup
+### 1. Shared Connection Management
 
-**File**: `src/lib/iotConfig.ts`
+**File**: `src/lib/sharedPubSubManager.ts`
+
+The shared PubSub manager ensures a single WebSocket connection is used for all MQTT subscriptions, improving performance and avoiding connection limits.
 
 ```typescript
-// Dynamic IoT configuration based on selected topic
-export async function getIoTConfig(customTopic?: string) {
-  try {
-    const { region, credentials, identityId } = await getAWSCredentials();
-    const endpoint = await getIoTEndpoint();
-    const finalTopic = customTopic;
-    if (!finalTopic) {
-      throw new Error(
-        "No topic provided to getIoTConfig - this is a bug in the topic selection system"
-      );
+class SharedPubSubManager {
+  private pubsub: PubSub | null = null;
+  private subscriptions: Map<string, any> = new Map();
+
+  async subscribe(
+    topics: string[],
+    callback: (data: any) => void
+  ): Promise<string> {
+    // Initialize PubSub if needed
+    if (!this.pubsub) {
+      const config = await iotConfigManager.getConfig();
+      this.pubsub = new PubSub({
+        region: config.region,
+        endpoint: config.endpoint,
+        credentials: config.credentials,
+      });
     }
-    return {
-      endpoint: `wss://${endpoint}/mqtt`,
-      region,
-      topic: finalTopic,
-      credentials,
-    };
-  } catch (error) {
-    console.error("Failed to get IoT configuration:", error);
-    throw error;
+
+    // Subscribe and manage callbacks
+    const subscriptionKey = this.generateSubscriptionKey();
+    const subscription = this.pubsub.subscribe({ topics }).subscribe({
+      next: callback,
+      error: (error) => console.error("Subscription error:", error),
+    });
+
+    this.subscriptions.set(subscriptionKey, subscription);
+    return subscriptionKey;
   }
 }
 ```
 
-**Purpose**:
+### 2. Global Telemetry Context
 
-- Provides dynamic IoT endpoint configuration
-- Generates proper MQTT topic names
-- Handles authentication and region settings
+**File**: `src/hooks/TelemetryContext.tsx`
 
-### 2. Real-time Data Hooks
-
-**File**: `src/hooks/useRealtimeWeatherData.ts`
+Provides platform-wide telemetry data management with automatic subscription handling.
 
 ```typescript
-export function useRealtimeWeatherData() {
-  const { selectedTopic } = useTopicContext();
-  const [data, setData] = useState<cardData | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
+export function TelemetryProvider({ children }: { children: React.ReactNode }) {
+  const [weatherData, setWeatherData] = useState<cardData | null>(null);
+  const [windData, setWindData] = useState<WindData[]>([]);
+  const [rainData, setRainData] = useState<RainData[]>([]);
 
   useEffect(() => {
-    let subscription: any = null;
+    let subscriptionKey: string | null = null;
 
-    const setupSubscription = async () => {
-      try {
-        // Get IoT configuration for current topic
-        const iotConfig = await getIoTConfig(selectedTopic);
-        const topic = getWeatherTopic(selectedTopic);
+    const subscribeToTelemetry = async () => {
+      if (!weatherTopic) return;
 
-        // Create PubSub client
-        const pubSubClient = new PubSub({
-          region: iotConfig.region,
-          endpoint: iotConfig.endpoint,
-        });
-
-        // Subscribe to weather topic
-        subscription = pubSubClient.subscribe({ topics: [topic] }).subscribe({
-          next: (payload: any) => {
-            const weatherData = transformWeatherMessage(
-              payload.value || payload
-            );
-            setData(weatherData);
+      subscriptionKey = await sharedPubSubManager.subscribe(
+        [weatherTopic],
+        (data: any) => {
+          const payload = data.value || data;
+          if (payload && payload.data) {
+            transformMessage(payload);
             setIsConnected(true);
-          },
-          error: (err: any) => {
-            setError(new Error(`Connection error: ${err.message}`));
-            setIsConnected(false);
-          },
-        });
+          }
+        }
+      );
+    };
 
-        setIsLoading(false);
+    subscribeToTelemetry();
+    return () => {
+      if (subscriptionKey) {
+        sharedPubSubManager.unsubscribe(subscriptionKey);
+      }
+    };
+  }, [weatherTopic, transformMessage]);
+}
+```
+
       } catch (err) {
         setError(new Error("Failed to connect to weather data stream"));
-        setIsLoading(false);
+
+### 3. Device Status Monitoring
+
+**File**: `src/lib/deviceStatusMonitor.ts`
+
+Intelligent device monitoring with dual threshold system for optimal user experience.
+
+```typescript
+export class DeviceStatusMonitor {
+  private readonly UI_OFFLINE_THRESHOLD = 3000; // 3s for UI indicators
+  private readonly NOTIFICATION_THRESHOLD = 30000; // 30s for notifications
+
+  private checkDeviceStatuses() {
+    this.deviceActivity.forEach((activity, deviceId) => {
+      const timeSinceLastSeen = Date.now() - activity.lastSeen.getTime();
+
+      // Update UI status (quick response for visual indicators)
+      activity.isOnline = timeSinceLastSeen <= this.UI_OFFLINE_THRESHOLD;
+
+      // Send notification only after longer threshold
+      if (
+        timeSinceLastSeen > this.NOTIFICATION_THRESHOLD &&
+        !activity.offlineNotificationSent
+      ) {
+        this.publishDeviceStatusNotification(
+          deviceId,
+          activity.district,
+          "offline",
+          activity.lastSeen
+        );
+        activity.offlineNotificationSent = true;
       }
-    };
-
-    setupSubscription();
-
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
-  }, [selectedTopic]); // Re-run when topic changes
-
-  return { data, error, isLoading, isConnected };
+    });
+  }
 }
 ```
 
 **Key Features**:
 
-- Dynamic topic subscription based on context
-- Automatic reconnection on topic changes
-- Error handling and loading states
-- Clean subscription management
+- **UI Indicators**: Respond within 3 seconds for immediate visual feedback
+- **Notifications**: Only sent after 30 seconds to avoid spam
+- **Automatic Recovery**: Online notifications when devices reconnect
+- **Global Monitoring**: Tracks all devices across the platform
 
-### 3. Data Transformation
+### 4. Optimized React Components
 
-```typescript
-const transformWeatherMessage = useCallback((payload: any): cardData => {
-  return {
-    id: Date.now(),
-    deviceId: payload.deviceId,
-    timestamp: payload.timestamp,
-    location: payload.location || "Unknown",
-    temperature: payload.data.temperature,
-    humidity: payload.data.humidity,
-    pressure: payload.data.pressure,
-    windDirection: payload.data.windDirection,
-    avgWindSpeed: payload.data.avgWindSpeed,
-    maxWindSpeed: payload.data.maxWindSpeed,
-    rainfall1hr: payload.data.rainfall1hr,
-    rainfall24hr: payload.data.rainfall24hr,
-  };
-}, []);
-```
+**File**: `src/components/platform/dashboard/WindChart.tsx`
 
-**Purpose**: Converts raw IoT messages into typed data structures for the UI.
-
-## AWS Amplify PubSub Integration
-
-### 1. Client Configuration
-
-The PubSub client is configured with:
-
-- **Region**: AWS region where IoT Core is deployed
-- **Endpoint**: WebSocket endpoint for MQTT over WebSockets
-- **Authentication**: Integrated with Amplify Auth
-
-### 2. Subscription Pattern
+Efficient real-time chart components using proper React optimization patterns.
 
 ```typescript
-const pubSubClient = new PubSub({
-  region: "your-region",
-  endpoint: "wss://your-iot-endpoint/mqtt",
-});
+export default function WindChart() {
+  const { windData, error, isLoading } = useTelemetry();
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
-subscription = pubSubClient.subscribe({ topics: [topic] }).subscribe({
-  next: (message) => handleMessage(message),
-  error: (error) => handleError(error),
-});
+  // Real-time updates for status indicators
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Expensive chart data transformation only
+  const chartData = useMemo(() => {
+    if (!windData || windData.length === 0) return [];
+    return windData.map((item) => ({
+      ...item,
+      formattedTime: formatDate(item.timestamp),
+    }));
+  }, [windData]);
+
+  // Real-time status calculation
+  const statusInfo = useMemo(() => {
+    if (!windData || windData.length === 0)
+      return { statusText: "", isStale: false };
+
+    const latestData = windData[windData.length - 1];
+    const timeDiff = currentTime - new Date(latestData.timestamp).getTime();
+    const isStale = timeDiff > 3000;
+
+    return {
+      statusText: isStale
+        ? "Last data from IoT sensors"
+        : "Live data from IoT sensors",
+      isStale,
+    };
+  }, [windData, currentTime]);
+}
 ```
 
-### 3. Message Flow
+**Optimization Strategy**:
 
-1. **IoT Device** publishes to MQTT topic (e.g., `weather/data/<location>`)
-2. **AWS IoT Core** receives and routes the message
-3. **Amplify PubSub** establishes WebSocket connection
-4. **React Hook** receives real-time updates
-5. **UI Components** automatically re-render with new data
+- **useState + useEffect**: For real-time status updates
+- **useMemo**: Only for expensive computations (chart data transformation)
+- **Simple functions**: No memoization for basic operations like date formatting
+- **Selective re-renders**: Components only update when necessary
 
-## Topic-Based Data Organization
+## Architecture Benefits
+
+### Performance Optimizations
+
+1. **Single WebSocket Connection**: Shared PubSub manager reduces connection overhead
+2. **Consolidated Utilities**: Shared device status calculations across components
+3. **React Optimization**: Proper use of hooks prevents unnecessary re-renders
+4. **Global State Management**: Contexts provide data without prop drilling
+
+### Scalability Features
+
+1. **Topic-based Architecture**: Easy addition of new weather stations
+2. **Modular Components**: Reusable chart and data components
+3. **Shared Infrastructure**: Connection pooling and resource optimization
+4. **Error Isolation**: Component-level error boundaries
+
+### User Experience
+
+1. **Immediate Feedback**: UI indicators respond within 3 seconds
+2. **Smart Notifications**: Only notify after 30 seconds to avoid spam
+3. **Graceful Degradation**: System continues working with partial data
+4. **Visual Status**: Clear indicators for connection health and data freshness
+
+## Data Flow
+
+```
+1. IoT Device → AWS IoT Core → MQTT Topic
+2. Shared PubSub Manager → Global Context (Telemetry/Notifications)
+3. Device Status Monitor → Real-time Status Updates
+4. React Components → Optimized Rendering
+5. User Interface → Live Dashboard Updates
+```
+
+## Configuration
+
+### Environment Variables
+
+```env
+# AWS Configuration
+AWS_REGION=your-aws-region
+AWS_IOT_ENDPOINT=your-iot-endpoint
+
+# Topic Configuration
+IOT_WEATHER_TOPIC_PREFIX=weather/data
+IOT_NOTIFICATION_TOPIC=weather/notifications
+```
 
 ### Topic Structure
 
 ```
-weather/data
+weather/data/
 ├── hcmc/          # Ho Chi Minh City weather data
 ├── hanoi/         # Hanoi weather data
 ├── danang/        # Da Nang weather data
 └── cantho/        # Can Tho weather data
+
+weather/notifications/  # Device status notifications
 ```
 
-### Message Format
+### Message Formats
+
+**Weather Data Message**:
 
 ```json
 {
-  "deviceId": "weather-station-001",
-  "timestamp": "2025-08-20T10:30:00Z",
-  "location": "Ho Chi Minh City",
+  "deviceId": "raspi-1-weather-edge",
+  "timestamp": "2025-09-16T10:30:00Z",
   "data": {
     "temperature": 28.5,
     "humidity": 75.2,
+    "pressure": 1013.25,
+    "avgWindSpeed": 5.2,
+    "maxWindSpeed": 8.1,
+    "windDirection": 180,
+    "rainfall1hr": 0.0,
+    "rainfall24hr": 2.5
+  }
+}
+```
+
+**Device Status Notification**:
+
+```json
+{
+  "type": "device_status",
+  "deviceId": "raspi-1-weather-edge",
+  "district": "hcmc",
+  "status": "offline",
+  "timestamp": "2025-09-16T10:30:00Z",
+  "lastSeen": "2025-09-16T10:29:30Z",
+  "offlineDuration": 30000
+}
+```
+
     "pressure": 1013.25,
     "windDirection": 180,
     "avgWindSpeed": 2.5,
     "maxWindSpeed": 4.1,
     "rainfall1hr": 0.0,
     "rainfall24hr": 5.2
-  }
+
 }
-```
+}
+
+````
 
 ## Connection Management
 
@@ -227,7 +319,7 @@ error: (err: any) => {
   setError(new Error(`Connection error: ${err.message}`));
   setIsConnected(false);
 };
-```
+````
 
 ### 3. Connection States
 

@@ -49,7 +49,7 @@ export default function RecentActivityCard() {
         type: "platform",
         name: "Welcome to Weather Platform",
         status: "Active",
-        value: "System initialized successfully",
+        value: "Web initialized successfully",
         timestamp: new Date(),
       });
     }
@@ -63,7 +63,7 @@ export default function RecentActivityCard() {
       case "Normal":
       case "Active":
       case "low":
-        return "bg-green-500";
+        return "bg-green-400";
       case "High":
       case "Warning":
       case "medium":
@@ -76,7 +76,7 @@ export default function RecentActivityCard() {
       case "Error":
       case "high":
       case "critical":
-        return "bg-red-500";
+        return "bg-red-400";
       default:
         return "bg-gray-500";
     }

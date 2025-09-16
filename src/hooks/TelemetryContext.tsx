@@ -9,52 +9,15 @@ import React, {
   useMemo,
 } from "react";
 import { cardData, WindData, RainData } from "@/types/sensorData";
+import { TelemetryContextType, TelemetryProviderProps } from "@/types/telemetry";
 import { getWeatherTopic } from "@/lib/iotConfig";
 import { useTopicContext } from "@/hooks/TopicContext";
 import { deviceStatusMonitor } from "@/lib/deviceStatusMonitor";
 import { sharedPubSubManager } from "@/lib/sharedPubSubManager";
 
-interface WeatherMessage {
-  deviceId: string;
-  timestamp: string;
-  location?: string;
-  data: {
-    temperature: number;
-    humidity: number;
-    pressure: number;
-    windDirection: number;
-    avgWindSpeed: number;
-    maxWindSpeed: number;
-    rainfall1hr: number;
-    rainfall24hr: number;
-  };
-}
-
-interface TelemetryContextType {
-  // Weather card data
-  weatherData: cardData | null;
-
-  // Chart data
-  windData: WindData[];
-  rainData: RainData[];
-
-  // Connection state
-  error: Error | null;
-  isLoading: boolean;
-  isConnected: boolean;
-
-  // Control methods
-  refreshData: () => void;
-  clearData: () => void;
-}
-
 const TelemetryContext = createContext<TelemetryContextType | undefined>(
   undefined
 );
-
-interface TelemetryProviderProps {
-  children: React.ReactNode;
-}
 
 export function TelemetryProvider({ children }: TelemetryProviderProps) {
   const { selectedTopic } = useTopicContext();
@@ -175,15 +138,11 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
         setIsLoading(true);
         setError(null);
 
-        console.log(`🌤️ [TelemetryContext] Subscribing to: ${weatherTopic}`);
-
         // Use shared PubSub manager for telemetry subscription
         subscriptionKey = await sharedPubSubManager.subscribe(
           [weatherTopic],
           (data: any) => {
             try {
-              console.log("🌤️ [TelemetryContext] Received telemetry:", data);
-
               const payload = data.value || data;
               if (payload && payload.data) {
                 transformMessage(payload);
@@ -191,10 +150,10 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
                 setIsLoading(false);
               }
             } catch (err) {
-              console.error(
-                "🌤️ [TelemetryContext] Error processing message:",
-                err
-              );
+            //   console.error(
+            //     "[TelemetryContext] Error processing message:",
+            //     err
+            //   );
               setError(
                 err instanceof Error
                   ? err
@@ -207,7 +166,7 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
         setIsConnected(true);
         setIsLoading(false);
       } catch (err) {
-        console.error("🌤️ [TelemetryContext] Failed to subscribe:", err);
+        // console.error("[TelemetryContext] Failed to subscribe:", err);
         setError(
           err instanceof Error
             ? err
@@ -223,7 +182,7 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
     // Cleanup function
     return () => {
       if (subscriptionKey) {
-        console.log("🌤️ [TelemetryContext] Unsubscribing from telemetry");
+        console.log("[TelemetryContext] Unsubscribing from telemetry");
         sharedPubSubManager.unsubscribe(subscriptionKey);
       }
     };

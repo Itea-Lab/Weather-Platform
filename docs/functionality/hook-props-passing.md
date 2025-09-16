@@ -1,102 +1,208 @@
-# Hook Optimization: Props Passing vs Multiple Hook Calls
+# Architecture Evolution: Global Context vs Multiple Hook Calls
 
 ## Overview
 
-This document details a critical performance optimization implemented in the Weather Platform where we reduced IoT connections from 6 to 1 by using props-based data sharing instead of multiple hook calls.
+This document details the architectural evolution of the Weather Platform from multiple individual IoT connections to a unified global context system with shared connection management, resulting in optimal resource usage and improved performance.
 
-## The Problem: Multiple Hook Calls
+## Architecture Evolution
 
-### Original Implementation (BEFORE Optimization)
+### Phase 1: Multiple Hook Calls (Original)
 
-**File**: `src/app/platform/overview/page.tsx` (Before)
-
-```tsx
-export default function OverviewPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Weather Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Each WeatherCard called useRealtimeWeatherData individually */}
-        <WeatherCard
-          title="Temperature"
-          dataKey="temperature"
-          unit="°C"
-          icon="temperature"
-        />
-        <WeatherCard
-          title="Humidity"
-          dataKey="humidity"
-          unit="%"
-          icon="humidity"
-        />
-        ...
-      </div>
-    </div>
-  );
-}
-```
-
-**File**: `src/components/platform/DataCard.tsx` (Before)
+Each component individually called IoT hooks, creating multiple connections for the same data.
 
 ```tsx
+// ❌ Original: Multiple connections
 export default function WeatherCard({
   title,
   dataKey,
   unit,
   icon,
 }: WeatherCardProps) {
-  // ❌ PROBLEM: Each card calls the hook individually
-  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
-
-  // Component renders with its own data subscription
+  const { data, error, isLoading, isConnected } = useRealtimeWeatherData(); // Individual connection
   return <div className="card">{/* Render logic */}</div>;
 }
 ```
 
-### Problems with Original Approach
+**Problems**:
 
-1. **Multiple IoT Connections**: 6 WeatherCard components = 6 separate IoT connections
-2. **Resource Waste**: Each connection consumes bandwidth and memory
-3. **Synchronization Issues**: Data might arrive at different times
-4. **Performance Degradation**: Multiple WebSocket connections impact performance
-5. **Debugging Complexity**: Console flooded with duplicate connection logs
+- 6 components = 6 separate IoT connections
+- Resource waste and performance degradation
+- Synchronization issues between components
 
-### Connection Analysis (Before)
+### Phase 2: Props-Based Data Sharing (Intermediate)
 
-```
-WeatherCard[Temperature]  → useRealtimeWeatherData() → IoT Connection #1
-WeatherCard[Humidity]     → useRealtimeWeatherData() → IoT Connection #2
-WeatherCard[Pressure]     → useRealtimeWeatherData() → IoT Connection #3
-WeatherCard[Wind Speed]   → useRealtimeWeatherData() → IoT Connection #4
-WeatherCard[Max Wind]     → useRealtimeWeatherData() → IoT Connection #5
-WeatherCard[Wind Dir]     → useRealtimeWeatherData() → IoT Connection #6
-
-Total: 6 IoT Connections for the same weather data
-```
-
-## The Solution: Props-Based Data Sharing
-
-### Optimized Implementation (AFTER Optimization)
-
-**File**: `src/app/platform/overview/page.tsx` (After)
+Single hook call at parent level with data passed as props.
 
 ```tsx
-"use client";
-
-import WeatherCard from "@/components/platform/DataCard";
-import { useRealtimeWeatherData } from "@/hooks/useRealtimeWeatherData";
-
+// ✅ Improved: Single connection with props
 export default function OverviewPage() {
-  // SOLUTION: Single hook call at parent level
-  const { data, error, isLoading, isConnected } = useRealtimeWeatherData();
+  const { data, error, isLoading, isConnected } = useRealtimeWeatherData(); // Single connection
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Weather Dashboard</h1>
-        <TopicSelector />
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <WeatherCard
+        data={data}
+        error={error}
+        isLoading={isLoading}
+        isConnected={isConnected}
+      />
+      {/* All cards share same data */}
+    </div>
+  );
+}
+```
+
+### Phase 3: Global Context System (Current)
+
+Unified global contexts with shared PubSub connection management for platform-wide data access.
+
+```tsx
+// 🚀 Current: Global context with shared connections
+export default function OverviewPage() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <WeatherCard
+        title="Temperature"
+        dataKey="temperature"
+        unit="°C"
+        icon="temperature"
+      />
+      <WeatherCard
+        title="Humidity"
+        dataKey="humidity"
+        unit="%"
+        icon="humidity"
+      />
+      {/* All components access global telemetry context */}
+    </div>
+  );
+}
+
+// Components access global context directly
+export default function WeatherCard({
+  title,
+  dataKey,
+  unit,
+  icon,
+}: WeatherCardProps) {
+  const { weatherData, error, isLoading, isConnected } = useTelemetry(); // Global context
+  return <div className="card">{/* Render with global data */}</div>;
+}
+```
+
+## Current Implementation: Global Context Architecture
+
+### 1. Shared PubSub Manager
+
+**File**: `src/lib/sharedPubSubManager.ts`
+
+Single WebSocket connection shared across all subscriptions:
+
+```typescript
+class SharedPubSubManager {
+  private pubsub: PubSub | null = null;
+  private subscriptions: Map<string, any> = new Map();
+
+  async subscribe(
+    topics: string[],
+    callback: (data: any) => void
+  ): Promise<string> {
+    // Reuse existing PubSub instance
+    if (!this.pubsub) {
+      const config = await iotConfigManager.getConfig();
+      this.pubsub = new PubSub({
+        region: config.region,
+        endpoint: config.endpoint,
+        credentials: config.credentials,
+      });
+    }
+
+    const subscriptionKey = this.generateSubscriptionKey();
+    const subscription = this.pubsub.subscribe({ topics }).subscribe({
+      next: callback,
+      error: (error) => console.error("Subscription error:", error),
+    });
+
+    this.subscriptions.set(subscriptionKey, subscription);
+    return subscriptionKey;
+  }
+}
+```
+
+### 2. Global Telemetry Context
+
+**File**: `src/hooks/TelemetryContext.tsx`
+
+Platform-wide telemetry data management:
+
+```typescript
+export function TelemetryProvider({ children }: { children: React.ReactNode }) {
+  const [weatherData, setWeatherData] = useState<cardData | null>(null);
+  const [windData, setWindData] = useState<WindData[]>([]);
+  const [rainData, setRainData] = useState<RainData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    let subscriptionKey: string | null = null;
+
+    const subscribeToTelemetry = async () => {
+      if (!weatherTopic) return;
+
+      subscriptionKey = await sharedPubSubManager.subscribe(
+        [weatherTopic],
+        (data: any) => {
+          const payload = data.value || data;
+          if (payload && payload.data) {
+            transformMessage(payload); // Updates all state simultaneously
+            setIsConnected(true);
+          }
+        }
+      );
+    };
+
+    subscribeToTelemetry();
+    return () => {
+      if (subscriptionKey) {
+        sharedPubSubManager.unsubscribe(subscriptionKey);
+      }
+    };
+  }, [weatherTopic]);
+
+  const value = {
+    weatherData,
+    windData,
+    rainData,
+    isLoading,
+    isConnected,
+    error,
+    resetData,
+    clearData,
+  };
+
+  return (
+    <TelemetryContext.Provider value={value}>
+      {children}
+    </TelemetryContext.Provider>
+  );
+}
+
+// Hook for components to access global telemetry data
+export function useTelemetry(): TelemetryContextType {
+  const context = useContext(TelemetryContext);
+  if (!context) {
+    throw new Error("useTelemetry must be used within a TelemetryProvider");
+  }
+  return context;
+}
+```
+
+return (
+<div className="space-y-6">
+<div className="flex justify-between items-center">
+<h1 className="text-3xl font-bold">Weather Dashboard</h1>
+<TopicSelector />
+</div>
 
       <section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -125,9 +231,11 @@ export default function OverviewPage() {
         </div>
       </section>
     </div>
-  );
+
+);
 }
-```
+
+````
 
 **File**: `src/components/platform/DataCard.tsx` (After)
 
@@ -240,7 +348,7 @@ export default function WeatherCard({
     </div>
   );
 }
-```
+````
 
 ### Optimized Connection Analysis (After)
 

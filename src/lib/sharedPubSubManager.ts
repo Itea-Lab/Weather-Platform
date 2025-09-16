@@ -47,7 +47,6 @@ class SharedPubSubManager {
         credentials: iotConfig.credentials,
       });
 
-      console.log("Shared PubSub connection established");
       return this.pubsub;
     } catch (error) {
       console.error("Failed to initialize shared PubSub:", error);
@@ -66,11 +65,11 @@ class SharedPubSubManager {
 
     // If already subscribed to these topics, reuse the subscription
     if (this.activeSubscriptions.has(subscriptionKey)) {
-      console.log("Reusing existing subscription for topics:", topics);
+      // console.log("Reusing existing subscription for topics:", topics);
       return subscriptionKey;
     }
 
-    console.log("Creating new subscription for topics:", topics);
+    // console.log("Creating new subscription for topics:", topics);
 
     const subscription = pubsub.subscribe({ topics }).subscribe({
       next: callback,
@@ -119,7 +118,6 @@ class SharedPubSubManager {
     }
     this.activeSubscriptions.clear();
     this.pubsub = null;
-    console.log("Shared PubSub manager cleaned up");
   }
 }
 

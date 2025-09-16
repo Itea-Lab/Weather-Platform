@@ -3,7 +3,7 @@
 import WeatherCard from "@/components/platform/dashboard/DataCard";
 import WindChart from "@/components/platform/dashboard/WindChart";
 import RainChart from "@/components/platform/dashboard/RainChart";
-import TopicSelector from "@/components/platform/TopicSelector";
+import TopicSelector from "@/components/platform/dashboard/TopicSelector";
 import { useTelemetry } from "@/hooks/TelemetryContext";
 
 export default function DashboardPage() {
