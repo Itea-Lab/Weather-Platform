@@ -9,6 +9,7 @@ import { fetchThings } from "./functions/fetchThings/resource";
 import { deleteThing } from "./functions/deleteThing/resource";
 import { getIoTEndpoint } from "./functions/getIoTEndpoint/resource";
 import { getDataset } from "./functions/getDataset/resource";
+import { getTotalReadings } from "./functions/getTotalReadings/resource";
 import { WeatherDatasetStorage } from "./custom/WeatherDatasetStorage/resource";
 import { CustomWeatherDataGlue } from "./custom/WeatherDataGlue/resource";
 import { CustomEventBridge } from "./custom/EventBridge/resource";
@@ -21,6 +22,7 @@ export const backend = defineBackend({
   deleteThing,
   getIoTEndpoint,
   getDataset,
+  getTotalReadings,
 });
 
 const addThingLambda = backend.addThing.resources.lambda;
@@ -28,6 +30,7 @@ const fetchThingsLambda = backend.fetchThings.resources.lambda;
 const deleteThingLambda = backend.deleteThing.resources.lambda;
 const getIoTEndpointLambda = backend.getIoTEndpoint.resources.lambda;
 const getDatasetLambda = backend.getDataset.resources.lambda;
+const getTotalReadingsLambda = backend.getTotalReadings.resources.lambda;
 const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
@@ -249,6 +252,18 @@ const getDatasetSTSPolicyStatement = new iam.PolicyStatement({
 
 getDatasetLambda.addToRolePolicy(getDatasetSTSPolicyStatement);
 
+// Add S3 permissions to the getTotalReadings Lambda function
+const getTotalReadingsS3PolicyStatement = new iam.PolicyStatement({
+  sid: "AllowS3ListTotalReadings",
+  actions: ["s3:ListBucket", "s3:ListObjectsV2"],
+  resources: [
+    "arn:aws:s3:::itea-weather-data-lake-storage", // Source bucket with raw data
+    "arn:aws:s3:::itea-weather-data-lake-storage/raw-data/weatherPlatform/telemetry/*", // Objects in source bucket
+  ],
+});
+
+getTotalReadingsLambda.addToRolePolicy(getTotalReadingsS3PolicyStatement);
+
 // Create EventBridge construct for scheduled processing (using main stack)
 const eventBridge = new CustomEventBridge(
   backend.stack,
@@ -272,6 +287,8 @@ backend.addOutput({
     getIoTEndpointFunctionArn: getIoTEndpointLambda.functionArn,
     getDatasetFunctionName: getDatasetLambda.functionName,
     getDatasetFunctionArn: getDatasetLambda.functionArn,
+    getTotalReadingsFunctionName: getTotalReadingsLambda.functionName,
+    getTotalReadingsFunctionArn: getTotalReadingsLambda.functionArn,
     // CDK Weather Dataset Storage (replaces Amplify storage)
     weatherDatasetBucketName: weatherStorage.bucket.bucketName,
     weatherDatasetBucketArn: weatherStorage.bucket.bucketArn,

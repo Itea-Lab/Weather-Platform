@@ -1,3 +1,5 @@
+"use client";
+
 import useSWR from "swr";
 import { useMemo } from "react";
 import { cardData, WindData, RainData } from "@/types/sensorData";
@@ -230,7 +232,6 @@ export function useDevices() {
     "/api/iot/fetchThings",
     fetcher,
     {
-      refreshInterval: 30000, // Refresh every 30 seconds
       fallbackData: {
         success: true,
         message: "Loading devices...",
@@ -353,4 +354,43 @@ export async function downloadDatasetFile(url: string, filename: string) {
     console.error("Error downloading file:", error);
     throw error;
   }
+}
+
+// Hook to fetch total readings count from S3
+export function useTotalReadings() {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    totalReadings: number;
+    isEstimate?: boolean;
+    fetchedAt: string;
+    fetchedBy: string;
+  }>("/api/weather/totalReadings", fetcher, {
+    fallbackData: {
+      success: false,
+      totalReadings: 0,
+      isEstimate: true,
+      fetchedAt: new Date().toISOString(),
+      fetchedBy: "",
+    },
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      // Don't retry on 404s or auth errors
+      if (error.status === 404 || error.status === 401 || retryCount >= 2)
+        return;
+
+      // Retry after 10 seconds
+      setTimeout(() => revalidate({ retryCount }), 10000);
+    },
+  });
+
+  return {
+    totalReadings: data?.totalReadings || 0,
+    isEstimate: data?.isEstimate || false,
+    error: error
+      ? error instanceof Error
+        ? error
+        : new Error(String(error))
+      : null,
+    isLoading,
+    mutate,
+  };
 }

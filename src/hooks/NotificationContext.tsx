@@ -109,8 +109,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         subscriptionKey = await sharedPubSubManager.subscribe(
           [IOT_TOPICS.NOTIFICATIONS],
           (message: any) => {
-            console.log("Received notification:", message);
-
             try {
               const data = message.value || message;
 

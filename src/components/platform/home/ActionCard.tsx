@@ -24,12 +24,6 @@ export default function ActionCard() {
       to: "/devices",
     },
     {
-      title: "View Notifications",
-      description: "Check your notifications",
-      icon: <MessageSquareDot className="w-6 h-6 text-red-500" />,
-      to: "/notification",
-    },
-    {
       title: "Manage Datasets",
       description: "Manage your datasets",
       icon: <Database className="w-6 h-6 text-purple-500" />,
@@ -48,7 +42,7 @@ export default function ActionCard() {
       <p className="text-sm text-gray-500 mb-6">
         Quickly access common tasks and features
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {actions.map((action, index) => (
           <div
             className="bg-slate-50 p-4 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
