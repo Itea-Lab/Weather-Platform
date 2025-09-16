@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useIoT } from "@/hooks/useIoT";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTelemetry } from "@/hooks/TelemetryContext";
 import {
   LineChart,
   XAxis,
@@ -15,25 +15,75 @@ import {
 import { format, parseISO } from "date-fns";
 
 export default function WindChart() {
-  const { windData, error, isLoading } = useIoT();
-  const [, setTick] = useState(0);
+  const { windData, error, isLoading } = useTelemetry();
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
-  // Force re-render every second to update stale status
+  // Update current time every second for real-time status indicators
   useEffect(() => {
     const interval = setInterval(() => {
-      setTick((tick) => tick + 1);
+      setCurrentTime(Date.now());
     }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const formatDate = (dateString: string) => {
+  // Simple date formatting function (no need to memoize for simple operations)
+  const formatDate = (dateString: string | number) => {
     try {
-      const date = parseISO(dateString);
+      const date = parseISO(String(dateString));
       return format(date, "HH:mm");
     } catch {
-      return dateString;
+      return String(dateString);
     }
+  };
+
+  // Only memoize expensive chart data transformation
+  const chartData = useMemo(() => {
+    if (!windData || windData.length === 0) return [];
+
+    return windData.map((item) => ({
+      ...item,
+      formattedTime: formatDate(item.timestamp),
+    }));
+  }, [windData]);
+
+  // Real-time status calculation using useState + useEffect pattern
+  const statusInfo = useMemo(() => {
+    if (!windData || windData.length === 0) {
+      return { statusText: "", isStale: false, showIndicator: false };
+    }
+
+    const latestData = windData[windData.length - 1];
+    const dataTime = new Date(latestData.timestamp).getTime();
+    const timeDiff = currentTime - dataTime;
+    const isStale = timeDiff > 3000;
+
+    return {
+      statusText: isStale
+        ? "Last data from IoT sensors"
+        : "Live data from IoT sensors",
+      isStale,
+      showIndicator: true,
+    };
+  }, [windData, currentTime]);
+
+  // Simple tooltip component (inline since it's not complex)
+  const TooltipContent = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border rounded shadow">
+          <p className="font-semibold">{`Time: ${label}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-blue-600">
+              {`${entry.dataKey}: ${entry.value}${
+                entry.dataKey.includes("Speed") ? " m/s" : "°"
+              }`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -68,43 +118,22 @@ export default function WindChart() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Wind Speed Live Data</h2>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {windData.length > 0 &&
-              (() => {
-                const latestData = windData[windData.length - 1];
-                const dataTime = new Date(latestData.timestamp).getTime();
-                const timeDiff = Date.now() - dataTime;
-                return timeDiff > 3000
-                  ? "Last data from IoT sensors"
-                  : "Live data from IoT sensors";
-              })()}
-          </span>
+          <span className="text-sm text-gray-500">{statusInfo.statusText}</span>
           {!isLoading &&
-            windData.length > 0 &&
-            (() => {
-              const latestData = windData[windData.length - 1];
-              const dataTime = new Date(latestData.timestamp).getTime();
-              const timeDiff = Date.now() - dataTime;
-              const isStale = timeDiff > 3000;
-
-              return isStale ? (
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              ) : (
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              );
-            })()}
+            statusInfo.showIndicator &&
+            (statusInfo.isStale ? (
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            ) : (
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            ))}
         </div>
       </div>
 
-      {windData && windData.length > 0 ? (
+      {chartData && chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={windData}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={formatDate}
-              tick={{ fontSize: 12 }}
-            />
+            <XAxis dataKey="formattedTime" tick={{ fontSize: 12 }} />
             <YAxis
               label={{
                 value: "Wind Speed (m/s)",
@@ -113,7 +142,7 @@ export default function WindChart() {
               }}
               tick={{ fontSize: 12 }}
             />
-            <Tooltip labelFormatter={(value) => `Time: ${formatDate(value)}`} />
+            <Tooltip content={<TooltipContent />} />
             <Legend />
             <Line
               type="monotone"

@@ -1,5 +1,9 @@
 import { sharedPubSubManager } from "./sharedPubSubManager";
 import { IOT_TOPICS } from "@/config/iotTopics";
+import {
+  isRecentActivity,
+  DEVICE_OFFLINE_THRESHOLD,
+} from "./deviceStatusUtils";
 
 interface DeviceActivity {
   deviceId: string;
@@ -13,7 +17,7 @@ export class DeviceStatusMonitor {
   private static instance: DeviceStatusMonitor;
   private deviceActivity: Map<string, DeviceActivity> = new Map();
   private monitoringInterval: NodeJS.Timeout | null = null;
-  private readonly OFFLINE_THRESHOLD = 3000; // 3 seconds
+  private readonly OFFLINE_THRESHOLD = DEVICE_OFFLINE_THRESHOLD;
   private readonly CHECK_INTERVAL = 1000; // Check every second
 
   private constructor() {}
@@ -41,12 +45,10 @@ export class DeviceStatusMonitor {
     district: string,
     timestamp: string | number
   ) {
-    const now = new Date();
     const dataTime = new Date(timestamp);
 
     // Only record if the data is recent (not old data)
-    if (now.getTime() - dataTime.getTime() < 10000) {
-      // Within 10 seconds
+    if (isRecentActivity(timestamp)) {
       const wasOffline = this.deviceActivity.get(deviceId)?.isOnline === false;
 
       this.deviceActivity.set(deviceId, {

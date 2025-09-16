@@ -9,33 +9,15 @@ import {
   DeviceRegistrationResponse,
   DeviceListResponse,
 } from "@/types/device";
+import {
+  standardFetcher,
+  normalizeError,
+  createRetryConfig,
+  createSWRConfig,
+} from "./apiUtils";
 
-// For GET requests only
-const fetcher = async (url: string) => {
-  try {
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    const res = await fetch(url, {
-      headers,
-      credentials: "include", // This sends cookies automatically
-    });
-
-    if (!res.ok) {
-      const errorData = await res
-        .json()
-        .catch(() => ({ error: res.statusText }));
-      const error = new Error(errorData.error || "API request failed");
-      (error as any).status = res.status;
-      throw error;
-    }
-
-    return await res.json();
-  } catch (error) {
-    throw error;
-  }
-};
+// For GET requests only - keeping original fetcher for backward compatibility
+const fetcher = standardFetcher;
 
 export function useLatestWeatherData() {
   const { data, error, isLoading } = useSWR<cardData>(
@@ -231,7 +213,7 @@ export function useDevices() {
   const { data, error, isLoading, mutate } = useSWR<DeviceListResponse>(
     "/api/iot/fetchThings",
     fetcher,
-    {
+    createSWRConfig({
       fallbackData: {
         success: true,
         message: "Loading devices...",
@@ -241,26 +223,18 @@ export function useDevices() {
         fetchedAt: new Date().toISOString(),
         fetchedBy: "",
       },
-      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
-        // Don't retry on 404s or auth errors
-        if (error.status === 404 || error.status === 401 || retryCount >= 3)
-          return;
-
-        // Retry after 5 seconds
-        setTimeout(() => revalidate({ retryCount }), 5000);
-      },
-    }
+      onErrorRetry: createRetryConfig({
+        maxRetries: 3,
+        retryDelayMs: 5000,
+      }),
+    })
   );
 
   return {
     devices: data?.devices || [],
     totalCount: data?.totalCount || 0,
     thingGroup: data?.thingGroup || "ITeaWeatherHub",
-    error: error
-      ? error instanceof Error
-        ? error
-        : new Error(String(error))
-      : null,
+    error: normalizeError(error),
     isLoading,
     mutate, // For manual refresh
   };
@@ -364,32 +338,28 @@ export function useTotalReadings() {
     isEstimate?: boolean;
     fetchedAt: string;
     fetchedBy: string;
-  }>("/api/weather/totalReadings", fetcher, {
-    fallbackData: {
-      success: false,
-      totalReadings: 0,
-      isEstimate: true,
-      fetchedAt: new Date().toISOString(),
-      fetchedBy: "",
-    },
-    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
-      // Don't retry on 404s or auth errors
-      if (error.status === 404 || error.status === 401 || retryCount >= 2)
-        return;
-
-      // Retry after 10 seconds
-      setTimeout(() => revalidate({ retryCount }), 10000);
-    },
-  });
+  }>(
+    "/api/weather/totalReadings",
+    fetcher,
+    createSWRConfig({
+      fallbackData: {
+        success: false,
+        totalReadings: 0,
+        isEstimate: true,
+        fetchedAt: new Date().toISOString(),
+        fetchedBy: "",
+      },
+      onErrorRetry: createRetryConfig({
+        maxRetries: 2,
+        retryDelayMs: 10000,
+      }),
+    })
+  );
 
   return {
     totalReadings: data?.totalReadings || 0,
     isEstimate: data?.isEstimate || false,
-    error: error
-      ? error instanceof Error
-        ? error
-        : new Error(String(error))
-      : null,
+    error: normalizeError(error),
     isLoading,
     mutate,
   };

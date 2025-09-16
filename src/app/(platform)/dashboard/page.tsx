@@ -4,11 +4,12 @@ import WeatherCard from "@/components/platform/dashboard/DataCard";
 import WindChart from "@/components/platform/dashboard/WindChart";
 import RainChart from "@/components/platform/dashboard/RainChart";
 import TopicSelector from "@/components/platform/TopicSelector";
-import { useIoT } from "@/hooks/useIoT";
+import { useTelemetry } from "@/hooks/TelemetryContext";
 
 export default function DashboardPage() {
-  // Single hook call for all weather cards
-  const { data, error, isLoading, isConnected } = useIoT();
+  // Use global telemetry context instead of local hook
+  const { weatherData, windData, rainData, error, isLoading, isConnected } =
+    useTelemetry();
 
   return (
     <div className="space-y-6">
@@ -24,7 +25,7 @@ export default function DashboardPage() {
             dataKey="temperature"
             unit="°C"
             icon="temperature"
-            data={data}
+            data={weatherData}
             error={error}
             isLoading={isLoading}
             isConnected={isConnected}
@@ -34,7 +35,7 @@ export default function DashboardPage() {
             dataKey="humidity"
             unit="%"
             icon="humidity"
-            data={data}
+            data={weatherData}
             error={error}
             isLoading={isLoading}
             isConnected={isConnected}
@@ -44,7 +45,7 @@ export default function DashboardPage() {
             dataKey="pressure"
             unit=" hPa"
             icon="barometric"
-            data={data}
+            data={weatherData}
             error={error}
             isLoading={isLoading}
             isConnected={isConnected}
@@ -60,7 +61,7 @@ export default function DashboardPage() {
               dataKey="avgWindSpeed"
               unit=" m/s"
               icon="windSpeed"
-              data={data}
+              data={weatherData}
               error={error}
               isLoading={isLoading}
               isConnected={isConnected}
@@ -70,7 +71,7 @@ export default function DashboardPage() {
               dataKey="maxWindSpeed"
               unit=" m/s"
               icon="windSpeed"
-              data={data}
+              data={weatherData}
               error={error}
               isLoading={isLoading}
               isConnected={isConnected}
@@ -80,7 +81,7 @@ export default function DashboardPage() {
               dataKey="windDirection"
               unit="°"
               icon="windDirection"
-              data={data}
+              data={weatherData}
               error={error}
               isLoading={isLoading}
               isConnected={isConnected}
