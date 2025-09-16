@@ -159,7 +159,7 @@ export class DeviceStatusMonitor {
       this.monitoringInterval = null;
     }
     this.deviceActivity.clear();
-    console.log("🔌 Device Status Monitor destroyed");
+    // console.log("Device Status Monitor destroyed");
   }
 }
 
