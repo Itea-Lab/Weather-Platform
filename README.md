@@ -143,27 +143,41 @@ pnpm dev
 
 ### Production Deployment
 
-For production deployment with CI/CD:
+For production deployment with manual setup:
 
-1. **Add Hosting:**
-
-   ```bash
-   npx ampx add hosting --profile weather-platform
-   ```
-
-2. **Deploy to Production:**
+1. **Deploy Backend to Production:**
 
    ```bash
-   npx ampx publish --profile weather-platform
+   npx ampx pipeline-deploy --branch prod --outputs-format json --profile <profile_name>
    ```
 
-3. **Connect Git Repository:**
+2. **Set Up Hosting via Amplify Console:**
 
-   - Link to GitHub/GitLab for automatic deployments
-   - Push to main branch triggers production build
+   - Go to [AWS Amplify Console](https://console.aws.amazon.com/amplify/)
+   - Click **"Create app"** → **"Host web app"**
+   - Choose **GitHub** (or your Git provider)
+   - Select your repository: `Itea-Lab/Weather-Platform`
+   - Select branch: `prod`
+   - Configure build settings:
+     - **App name**: `weather-platform-prod`
+     - **Build command**: `npm run build`
+     - **Build output directory**: `.next`
+     - **Node.js version**: `18` or higher
 
-4. **Access Production App:**
-   - URL: `https://[branch].[app-id].amplifyapp.com`
+3. **Environment Variables (Optional):**
+
+   Add these if needed:
+
+   - `AWS_REGION`: `us-east-1` (or your region)
+
+4. **Deploy:**
+
+   - Click **"Save and deploy"**
+   - Wait for deployment to complete (5-10 minutes)
+
+5. **Access Production App:**
+   - URL: `https://prod.[app-id].amplifyapp.com`
+   - Custom domain: Configure in Amplify Console if needed
 
 ## Features
 
@@ -270,9 +284,9 @@ pnpm build        # Build for production
 pnpm start        # Start production server
 pnpm lint         # Run ESLint
 
-# AWS Amplify (use npm for these commands)
-npx ampx login              # Login to Amplify
-npx ampx sandbox            # Deploy to sandbox
-npx ampx publish            # Deploy to production
-npx ampx add hosting        # Add hosting configuration
+# AWS Amplify Gen 2 (use npm for these commands)
+npx ampx login                    # Login to Amplify
+npx ampx sandbox                  # Deploy to sandbox (development)
+npx ampx pipeline-deploy          # Deploy backend to production
+npx ampx info                     # Get troubleshooting information
 ```
