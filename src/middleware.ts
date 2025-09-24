@@ -1,32 +1,36 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { authenticateMiddleware } from "@/lib/auth";
 
-export function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-
-  const protectedPaths = ["/api/mockData/", "/api/weather/"];
-  // console.log("Middleware triggered for path:", path);
-  // Skip middleware for non-API routes or the auth API itself
-  if (!path.startsWith("/api/") || path.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
-
-  // Check for browser direct access vs app requests
-  const referer = request.headers.get("referer") || "";
-  const isDirectAccess = !referer.includes(request.nextUrl.origin);
-
-  // check if this is direct access
-  if (isDirectAccess && protectedPaths.some((p) => path.startsWith(p))) {
-    // console.log("Blocking direct API access");
-    return NextResponse.json(
-      { error: "Direct API access not allowed" },
-      { status: 403 }
+export async function middleware(request: NextRequest) {
+  // Only protect API routes, not page routes
+  if (
+    request.nextUrl.pathname.startsWith("/api/weather/") ||
+    request.nextUrl.pathname.startsWith("/api/iot/")
+  ) {
+    // Apply secure authentication for all protected routes
+    const isAuthenticated = await authenticateMiddleware(
+      `Middleware[${request.nextUrl.pathname}]`
     );
+
+    if (isAuthenticated) {
+      return NextResponse.next();
+    } else {
+      console.log("Middleware: Authentication failed");
+      return NextResponse.json(
+        {
+          error: "Authentication required",
+          details: "No valid authentication tokens found",
+          recoverySuggestion: "Please sign in to access this resource",
+        },
+        { status: 401 }
+      );
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/api/weather/:path*", "/api/iot/:path*"],
 };

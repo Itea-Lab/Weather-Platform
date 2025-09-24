@@ -5,3 +5,7 @@ Dockerfile
 *.log
 .git
 .env*
+.amplify
+.vscode
+docs/
+.md

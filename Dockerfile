@@ -1,7 +1,7 @@
 # BASE IMAGE
 FROM node:22-alpine AS base
 LABEL author="PancakesLmao <phucthin29@gmail.com>"
-LABEL description="Dockerfile for Nextjs weather dashboard"
+LABEL description="Dockerfile for Nextjs weather platform"
 LABEL version="1.0"
 
 # Set the working directory

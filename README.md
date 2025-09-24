@@ -1,195 +1,278 @@
-# ITea Edge Hub for Weather Stations
-A modern IoT sensor data visualization dashboard built with Next.js, featuring real-time data monitoring, integration with InfluxDB for time-series data storage.
-  
-## Technologies Used
-- **pnpm**: A fast, disk space-efficient package manager.
-- **Next.js**: A React framework for building server-rendered applications.
-- **TypeScript**: A superset of JavaScript that adds static types.
-- **Tailwind CSS**: For styling the application.
-- **Shadcn**: A component library for building user interfaces
-- **InfluxDB**: A time-series database for storing sensor data.
-- **Docker**: For containerizing the application.
+# <h1 align="center">Weather Platform - IoT Dashboard</h1>
 
-## Quick Start
-### Prerequisites
+<p align="center">A modern, real-time IoT weather monitoring dashboard built with Next.js and AWS Amplify</p>
 
-- Node.js 18 or higher  
-- pnpm package manager  
-- InfluxDB instance (local hosting)
+<div align="center">
+    <img src="https://cdn.jsdelivr.net/gh/tandpfun/skill-icons/icons/NextJS-Dark.svg" height="45" alt="nextjs logo" />
+    <img width="12" />
+    <img src="https://cdn.jsdelivr.net/gh/tandpfun/skill-icons/icons/TypeScript.svg" height="45" alt="typescript logo" />
+    <img width="12" />
+    <img src="https://cdn.jsdelivr.net/gh/tandpfun/skill-icons/icons/TailwindCSS-Dark.svg" height="45" alt="tailwind logo" />
+    <img width="12" />
+    <img src="https://cdn.jsdelivr.net/gh/tandpfun/skill-icons/icons/AWS-Dark.svg" height="45" alt="aws logo" />
+</div>
 
-### Setup Application
-Clone this repository:
+## Getting Started
+
+### Step 1: Prerequisites
+
+- [Node.js](https://nodejs.org/) 18 or higher
+- [pnpm](https://pnpm.io/) package manager
+- AWS Account with appropriate permissions
+
+### Step 2: Install AWS CLI
+
+Download and install the AWS CLI:
+
 ```bash
-git clone https://github.com/Itea-Lab/Weather-Dashboard.git
-cd Weather-Dashboard
+# Windows (using MSI installer)
+# Download from: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+
+# macOS (using Homebrew)
+brew install awscli
+
+# Linux (using curl)
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
 ```
 
-Create .env.local file in the root of the project and add your environment variables:
+Verify installation:
 
-```env
-# JWT Configuration
-JWT_SECRET=<secret-jwt-key>
-JWT_EXPIRES_IN=<duration>
-# Admin User
-ADMIN_USERNAME=<username>
-ADMIN_NAME=<name>
-ADMIN_PASSWORD_HASH=<password$Hash>
-ADMIN_EMAIL=<email>
-ADMIN_ROLE="admin"
-# Test User
-TEST_USERNAME="testuser"
-TEST_NAME=Test User
-TEST_PASSWORD_HASH=<password$Hash>
-TEST_EMAIL=<email>
-TEST_ROLE="user"
-# InfluxDB configuration
-# If you are running InfluxDB in a different container, use the service name as the route
-INFLUXDB_ROUTE=http://<service_name>:8086
-INFLUXDB_ORG=<your-influxdb-org>
-INFLUXDB_BUCKET=<your-influxdb-bucket>
-```
-Install dependencies
 ```bash
+aws --version
+```
+
+### Step 3: Create IAM User
+
+1. **Go to AWS Console** → IAM → Users → "Create user"
+
+2. **User details:**
+
+   - Username: `your_iam_name`
+   - Select "Provide user access to the AWS Management Console" if needed
+
+3. **Set permissions:**
+
+   - Choose "Attach policies directly"
+   - Add these managed policies:
+     - `AmplifyBackendDeployFullAccess`
+     - `AWSCloudFormationReadOnlyAccess` (for debugging purpose)
+
+4. **Create Access Keys:**
+   - Go to user → Security credentials → "Create access key"
+   - Choose "Command Line Interface (CLI)"
+   - Save the **Access Key ID** and **Secret Access Key**
+
+### Step 4: Configure AWS CLI Profile
+
+Set up a named profile for this project:
+
+```bash
+# Configure AWS CLI with your profile
+aws configure --profile <profile_name>
+
+# Enter when prompted:
+# AWS Access Key ID: [your-access-key-id]
+# AWS Secret Access Key: [your-secret-access-key]
+# Default region name: enter region you want to deploy (by default: us-east-1)
+# Default output format: json
+```
+
+Verify the profile:
+
+```bash
+aws sts get-caller-identity --profile <profile_name>
+```
+
+### Step 5: Clone and Install Dependencies
+
+```bash
+# Clone the repository
+git clone https://github.com/Itea-Lab/Weather-Platform.git
+cd Weather-Platform
+
+# Install dependencies
 pnpm install
 ```
 
-### Set up InfluxDB
+### Step 6: Environment Configuration (Optional)
 
-Before running the application, you need to configure InfluxDB:
-1. Create an InfluxDB account or set up a local instance
-2. Create an organization and bucket for your data
-3. Generate an authentication token (you can find it on the InfluxDB UI)
-4. Update the InfluxDB configuration in your .env.local file
+Create a `.env.local` file in the root directory:
 
-## Generate password hash
-create a file `gen_hash.ts` in the root of the project with the following content:
-```typescript
-const bcrypt = require("bcryptjs");
-
-async function generateHash() {
-  const password = "password"; 
-  // Change this to your desired password
-  const hash = await bcrypt.hash(password, 12);
-  console.log("Password hash:", hash);
-  console.log("Copy this hash to your .env.local file");
-}
-
-generateHash();
+```env
+# AWS Configuration (Optional - auto-detected from AWS CLI)
+AWS_REGION=us-east-1
 ```
-Then run the script:
+
+> **Note:** Most configuration is automatically handled by Amplify. The `.env.local` file is mainly for development overrides.
+
+## Deployment
+
+### Development Deployment (Recommended for Testing)
+
+Use Amplify Sandbox - creates isolated AWS resources:
+
 ```bash
-pnpm node gen_hash.ts
+# Start sandbox environment
+npx ampx sandbox --profile weather-platform
 ```
 
-## Folder structure
-```
-.next/                  # Next.js build output directory
-node_modules/           # Node.js modules directory
-src/                        # Source code for the application
-├── app/                    # App directory for Next.js
-│   ├── api/                # API routes
-│   ├───|── auth/           # Authentication route
-│   ├───|───|── route.ts    
-│   ├───|── <otherAPI>/     # Other API routes
-│   ├───|───|── route.ts    
-│   ├── components/         # Reusable components
-│   ├───|── ui/             # UI components (Shadcn)
-│   ├── context/            # Context providers for state management
-│   ├── lib/                # Utility functions and libraries
-│   ├───|── auth.ts         # Authentication utilities
-│   ├───|── api.ts          # API utilities
-│   ├───|── influxdb.ts     # InfluxDB utilities
-│   ├───|── utils.ts        # General utility functions
-│   ├── types/              # TypeScript type definitions
-│   ├── dashboard/          # Dashboard main page
-│   ├───|───|── page.tsx
-│   ├───|───|── layout.tsx
-│   ├───|── subpage/        # Subpage of the dashboard
-│   ├───|───|── page.tsx
-│   ├── globals.css         # Global CSS styles
-│   ├── layout.tsx
-│   ├── page.tsx            # Main entry point for the app
-├── middleware.ts           # Middleware for handling requests
-public/                 # Static assets (images, fonts, etc.)
-.env.local              # Environment variables for local development
-.env.production         # Environment variables for production
-.gitignore              # Files & directories to ignore in Git
-.dockerignore           # Files & directories to ignore in Docker builds
-Dockerfile              # Dockerfile for building the application
-component.json          # Shadcn component configuration
-next.config.ts          # Next.js configuration file
-package.json            # Project metadata and dependencies
-pnpm-lock.yaml          # Lockfile for package versions
-tsconfig.json           # TypeScript configuration file
-```
+This will:
 
-## Data Format
-the sensor data must match the following format:
-```json
-{
-  "id": "1",
-  "timestamp": "2024-06-05T12:00:00Z",
-  "temperature": 23.5,
-  "humidity": 65.2,
-  "pressure": 1013.25
-}
-```
-The id and timestamp fields are required, while additional sensor data fields can be any numeric values.
+- Deploy backend infrastructure (Lambda, IoT, S3, Cognito)
+- Create development AWS resources
+- Generate `amplify_outputs.json` with configuration
+- Provide real-time AWS resource updates
 
-### Run the Application
-#### Run the development server:
+### Local Development
+
+Once sandbox is running, start the frontend:
+
 ```bash
+# Start development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Frontend URLs:**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Root: http://localhost:3000
+- Dashboard: http://localhost:3000/dashboard
+- Devices: http://localhost:3000/devices
+- Dataset: http://localhost:3000/dataset
 
-#### Run the Production Build
-For production deployment, create a `.env.production` file with production-specific values.  
+### Production Deployment
 
-To create a production build of your Next.js app, run the following command:
+For production deployment with CI/CD:
+
+1. **Add Hosting:**
+
+   ```bash
+   npx ampx add hosting --profile weather-platform
+   ```
+
+2. **Deploy to Production:**
+
+   ```bash
+   npx ampx publish --profile weather-platform
+   ```
+
+3. **Connect Git Repository:**
+
+   - Link to GitHub/GitLab for automatic deployments
+   - Push to main branch triggers production build
+
+4. **Access Production App:**
+   - URL: `https://[branch].[app-id].amplifyapp.com`
+
+## Features
+
+- **Real-time Dashboard**: Live weather data visualization with interactive charts
+- **IoT Device Management**: Register, monitor, and manage weather stations
+- **Device Status Monitoring**: Automated offline detection with notifications (30s threshold)
+- **Data Analytics**: Historical weather data with filtering and export capabilities
+- **User Authentication**: Secure Cognito-based authentication with role-based access
+- **Responsive Design**: Mobile-friendly interface with adaptive layouts
+- **Serverless Architecture**: AWS Lambda, IoT Core, S3, and Glue ETL integration
+
+## Technologies Used
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS, Shadcn/ui components
+- **Backend**: AWS Amplify Gen 2, Lambda functions
+- **IoT**: AWS IoT Core with PubSub messaging
+- **Storage**: Amazon S3 with CloudFront CDN
+- **Database**: AWS Glue for data transformation
+- **Authentication**: Amazon Cognito
+- **Package Manager**: pnpm (local), npm (Amplify builds)
+- **Charts**: Recharts for data visualization
+
+## ⚠️ Important Notes
+
+### AWS Resources Created
+
+When you deploy this platform, it creates the following AWS resources:
+
+- **Lambda Functions**: addThing, fetchThings, deleteThing, getIoTEndpoint, getDataset, getTotalReadings
+- **IoT Core**: Device registry, certificates, policies, and PubSub topics
+- **S3 Bucket**: Weather data storage with CloudFront CDN
+- **Cognito**: User pools and identity pools for authentication
+- **Glue ETL**: Data transformation pipeline
+- **EventBridge**: Scheduled data processing events
+- **CloudFront**: CDN for global dataset distribution
+- **Step Functions**: Orchestrated workflows for data processing
+- **Amplify App**: Backend and hosting configuration
+- **Other Resources**: CloudWatch logs, IAM roles, policies, and more
+
+### Cost Considerations
+
+- **Sandbox**: Development resources - minimal cost
+- **Production**: Usage-based pricing for AWS services
+- **Free Tier**: Many services are included in AWS Free Tier
+
+## Project Structure
+
+```
+Weather-Platform/
+├── amplify/                    # AWS Amplify backend configuration
+│   ├── backend.ts             # Main backend definition
+│   ├── auth/                  # Cognito authentication
+│   ├── functions/             # Lambda functions
+│   │   ├── addThing/          # Device registration
+│   │   ├── fetchThings/       # Device listing
+│   │   ├── getDataset/        # Weather data retrieval
+│   │   └── ...
+│   └── custom/                # Custom AWS resources
+│       ├── CloudFront/        # CDN configuration
+│       ├── EventBridge/       # Scheduled events
+│       └── WeatherDataGlue/   # ETL pipeline
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── api/               # API routes
+│   │   ├── dashboard/         # Main dashboard
+│   │   ├── devices/           # Device management
+│   │   ├── notification/      # Notification center
+│   │   └── dataset/           # Data visualization
+│   ├── components/            # Reusable React components
+│   │   ├── auth/              # Authentication components
+│   │   ├── platform/          # Dashboard components
+│   │   └── ui/                # Shadcn/ui components
+│   ├── hooks/                 # Custom React hooks
+│   │   ├── AuthContext.tsx    # Authentication state
+│   │   ├── TelemetryContext.tsx # Real-time data
+│   │   └── NotificationContext.tsx # IoT notifications
+│   ├── lib/                   # Utility libraries
+│   │   ├── api.ts             # API client
+│   │   ├── iotConfig.ts       # IoT configuration
+│   │   ├── deviceStatusMonitor.ts # Device monitoring
+│   │   └── sharedPubSubManager.ts # PubSub management
+│   ├── types/                 # TypeScript definitions
+│   │   ├── device.ts          # Device types
+│   │   ├── sensorData.ts      # Sensor data types
+│   │   └── telemetry.ts       # Telemetry types
+│   └── config/                # Configuration files
+│       ├── iotTopics.ts       # IoT topic definitions
+│       └── PubSubInitializer.tsx # PubSub setup
+├── public/                    # Static assets
+├── amplify.yml               # Amplify build configuration
+├── package.json              # Project dependencies
+├── pnpm-lock.yaml           # pnpm lockfile
+├── tsconfig.json            # TypeScript configuration
+└── tailwind.config.ts       # Tailwind CSS configuration
+```
+
+## Available Scripts
 
 ```bash
-pnpm build
-```
-This will generate an optimized version of your application in the `.next` directory.
-## Running in Production
-To run your Next.js app in production mode, you can use the following command:
+# Development
+pnpm dev          # Start development server
+pnpm build        # Build for production
+pnpm start        # Start production server
+pnpm lint         # Run ESLint
 
-```bash
-pnpm start
+# AWS Amplify (use npm for these commands)
+npx ampx login              # Login to Amplify
+npx ampx sandbox            # Deploy to sandbox
+npx ampx publish            # Deploy to production
+npx ampx add hosting        # Add hosting configuration
 ```
-This will start the Next.js server in production mode, serving the optimized build created by the `pnpm build` command.
-
-### Running with Docker
-#### Build the Docker image
-```
-docker build -t itea-edge-hub .
-```
-#### Run the Docker container
-```bash
-docker run -d -p 3000:3000 --env-file .env.local itea-edge-hub
-```
-### Or you can pull the pre-built image from Docker Hub:
-```bash
-docker pull pancakeslmao/itea-edge-hub:latest
-```
-Then run the container:
-```bash
-docker run -d -p 3000:3000 --env-file .env.local pancakeslmao/itea-edge-hub:latest
-```
-
-## Adding New Components
-To add new Shadcn/UI components to your project:
-```bash
-pnpm dlx shadcn-ui@latest add <component-name>
-```
-Examples:
-```bash
-pnpm dlx shadcn-ui@latest add button
-pnpm dlx shadcn-ui@latest add dialog
-pnpm dlx shadcn-ui@latest add chart
-```
-Components will be automatically installed with their dependencies and added to the `src/app/components/ui/` directory.

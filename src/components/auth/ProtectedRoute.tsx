@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/AuthContext";
 
 export default function ProtectedRoute({
   children,
@@ -13,6 +13,7 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
+    // Only redirect if we're done loading and there's no user
     if (!loading && !user) {
       router.push("/");
     }

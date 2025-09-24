@@ -1,68 +1,22 @@
+"use client";
+
 import useSWR from "swr";
 import { cardData, WindData, RainData } from "@/types/sensorData";
-import { Dataset } from "@/types/dataset";
+import { Dataset, WeatherDatasetResponse } from "@/types/dataset";
+import {
+  DeviceRegistrationData,
+  DeviceRegistrationResponse,
+  DeviceListResponse,
+} from "@/types/device";
+import {
+  standardFetcher,
+  normalizeError,
+  createRetryConfig,
+  createSWRConfig,
+} from "./apiUtils";
 
-const fetcher = async (url: string) => {
-  try {
-    // Get tokens from localStorage
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth-token") : null;
-    const csrfToken =
-      typeof window !== "undefined" ? localStorage.getItem("csrf-token") : null;
-
-    // Prepare headers
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    // Include CSRF token if available
-    if (csrfToken) {
-      headers["X-CSRF-Token"] = csrfToken;
-    }
-
-    // Include Auth token if available (as backup)
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    // Make the request (with credentials to include cookies)
-    const res = await fetch(url, {
-      headers,
-      credentials: "include", // Important: Send cookies with request
-    });
-
-    // Handle HTTP errors
-    if (!res.ok) {
-      let errorData;
-      try {
-        errorData = await res.json();
-      } catch (_error) {
-        errorData = { error: res.statusText || "Unknown error" };
-      }
-      // if (res.status === 401) {
-      //   console.log("Authentication required, redirecting to login");
-      // }
-      const error = new Error(
-        errorData.error || "API request failed"
-      );
-      (error as any).status = res.status;
-      (error as any).info = errorData;
-      throw error;
-    }
-
-    // Parse the JSON response
-    return await res.json();;
-  } catch (error) {
-    // Handle network errors
-    if (error instanceof Error && error.message.includes("Failed to fetch")) {
-      const networkError = new Error("Cannot connect to server");
-      (networkError as any).isNetworkError = true;
-      throw networkError;
-    }
-
-    throw error;
-  }
-};
+// For GET requests only - keeping original fetcher for backward compatibility
+const fetcher = standardFetcher;
 
 export function useLatestWeatherData() {
   const { data, error, isLoading } = useSWR<cardData>(
@@ -160,28 +114,15 @@ export function useDatasetData(
   };
 }
 
-export async function deleteDatapoint(timestamp: any) {
+export async function deleteDatapoint(timestamp: string | number) {
   try {
-    const token = localStorage.getItem("auth-token");
-    const csrfToken = localStorage.getItem("csrf-token");
-    if (!token || !csrfToken) {
-      throw new Error("Authentication required");
-    }
-
-    const formattedTimestamp =
-      timestamp instanceof Date ? timestamp.toISOString() : timestamp;
-
-    // console.log("Deleting datapoint with timestamp:", formattedTimestamp);
-
     const response = await fetch("/api/weather/deleteData", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-CSRF-Token": csrfToken, // Add the CSRF token
       },
-      body: JSON.stringify({ timestamp: formattedTimestamp }),
-      credentials: "include", // Include cookies
+      body: JSON.stringify({ timestamp }),
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -189,10 +130,236 @@ export async function deleteDatapoint(timestamp: any) {
       throw new Error(errorData.error || "Failed to delete data");
     }
 
-    const result = await response.json();
-    return result;
+    return await response.json();
   } catch (error) {
     console.error("Error deleting datapoint:", error);
     throw error;
   }
+}
+
+export async function registerDevice(
+  deviceData: DeviceRegistrationData
+): Promise<DeviceRegistrationResponse> {
+  try {
+    const response = await fetch("/api/iot/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(deviceData),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: response.statusText,
+        details: `HTTP ${response.status} error occurred`,
+      }));
+
+      // Throw an error with more detailed information
+      throw new Error(
+        errorData.error ||
+          (errorData.details
+            ? `${response.statusText}: ${errorData.details}`
+            : "Failed to register device")
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Error registering device:", error);
+    throw error;
+  }
+}
+
+export async function deleteDevice(
+  thingName: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch("/api/iot/deleteThing", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        deviceName: thingName,
+      }),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Deletion failed");
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Device deletion error:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Deletion failed",
+    };
+  }
+}
+
+// Hook to fetch devices from AWS IoT Core
+export function useDevices() {
+  const { data, error, isLoading, mutate } = useSWR<DeviceListResponse>(
+    "/api/iot/fetchThings",
+    fetcher,
+    createSWRConfig({
+      fallbackData: {
+        success: true,
+        message: "Loading devices...",
+        devices: [],
+        thingGroup: "ITeaWeatherHub",
+        totalCount: 0,
+        fetchedAt: new Date().toISOString(),
+        fetchedBy: "",
+      },
+      onErrorRetry: createRetryConfig({
+        maxRetries: 3,
+        retryDelayMs: 5000,
+      }),
+    })
+  );
+
+  return {
+    devices: data?.devices || [],
+    totalCount: data?.totalCount || 0,
+    thingGroup: data?.thingGroup || "ITeaWeatherHub",
+    error: normalizeError(error),
+    isLoading,
+    mutate, // For manual refresh
+  };
+}
+
+// Weather Dataset API functions
+const EMPTY_DATASETS = {}; // Stable reference outside component
+
+export function useWeatherDatasets(district?: string) {
+  const url = district
+    ? `/api/weather/dataset?district=${encodeURIComponent(district)}`
+    : "/api/weather/dataset";
+
+  const { data, error, isLoading, mutate } = useSWR<WeatherDatasetResponse>(
+    url,
+    fetcher,
+    {
+      refreshInterval: 0, // Disable automatic refresh to prevent repeated errors
+      fallbackData: { datasets: EMPTY_DATASETS },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      onErrorRetry: () => {
+        // Disable all automatic retries
+        return;
+      },
+    }
+  );
+
+  // Use stable fallback reference
+  const datasets = data?.datasets ?? EMPTY_DATASETS;
+
+  return {
+    datasets,
+    error: error
+      ? error instanceof Error
+        ? error
+        : new Error(String(error))
+      : null,
+    isLoading,
+    mutate,
+  };
+}
+
+export async function fetchWeatherDataset(
+  district?: string
+): Promise<WeatherDatasetResponse> {
+  try {
+    const url = district
+      ? `/api/weather/dataset?district=${encodeURIComponent(district)}`
+      : "/api/weather/dataset";
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch weather dataset");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching weather dataset:", error);
+    throw error;
+  }
+}
+
+export async function downloadDatasetFile(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to download file");
+    }
+
+    // Create blob and download
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    throw error;
+  }
+}
+
+// Hook to fetch total readings count from S3
+export function useTotalReadings() {
+  const { data, error, isLoading, mutate } = useSWR<{
+    success: boolean;
+    totalReadings: number;
+    isEstimate?: boolean;
+    fetchedAt: string;
+    fetchedBy: string;
+  }>(
+    "/api/weather/totalReadings",
+    fetcher,
+    createSWRConfig({
+      fallbackData: {
+        success: false,
+        totalReadings: 0,
+        isEstimate: true,
+        fetchedAt: new Date().toISOString(),
+        fetchedBy: "",
+      },
+      onErrorRetry: createRetryConfig({
+        maxRetries: 2,
+        retryDelayMs: 10000,
+      }),
+    })
+  );
+
+  return {
+    totalReadings: data?.totalReadings || 0,
+    isEstimate: data?.isEstimate || false,
+    error: normalizeError(error),
+    isLoading,
+    mutate,
+  };
 }

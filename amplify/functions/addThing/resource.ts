@@ -1,0 +1,13 @@
+import { defineFunction } from "@aws-amplify/backend";
+
+export const addThing = defineFunction({
+  name: "add-thing",
+  entry: "./handler.ts",
+  environment: {
+    AWS_IOT_THING_GROUP_NAME: "ITeaWeatherHub",
+    AWS_IOT_POLICY_NAME: "WeatherStationPolicies",
+  },
+  timeoutSeconds: 30,
+  memoryMB: 128,
+  runtime: 20, // Node.js 20.x
+});

@@ -1,0 +1,245 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CloudFront CDN for Weather Dataset - Depends on Storage Outputs Only",
+  "Parameters": {
+    "StorageBucketName": {
+      "Type": "String",
+      "Description": "Name of the S3 bucket from storage stack"
+    },
+    "StorageBucketDomainName": {
+      "Type": "String", 
+      "Description": "Domain name of the S3 bucket"
+    }
+  },
+  "Resources": {
+    "OriginAccessControl": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-weather-dataset-oac"
+          },
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4",
+          "Description": "Origin Access Control for Weather Dataset S3 Bucket"
+        }
+      }
+    },
+    "WeatherDatasetCachePolicy": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": {
+        "CachePolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-weather-dataset-cache"
+          },
+          "Comment": "Optimized cache policy for weather dataset files",
+          "DefaultTTL": 86400,
+          "MaxTTL": 2592000,
+          "MinTTL": 3600,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "EnableAcceptEncodingGzip": true,
+            "EnableAcceptEncodingBrotli": true,
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "all"
+            },
+            "HeadersConfig": {
+              "HeaderBehavior": "whitelist",
+              "Headers": [
+                "Access-Control-Request-Headers",
+                "Access-Control-Request-Method",
+                "Origin"
+              ]
+            },
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            }
+          }
+        }
+      }
+    },
+    "WeatherDatasetCDNDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Comment": "Weather Dataset CDN Distribution - Supports dynamic district paths",
+          "Enabled": true,
+          "HttpVersion": "http2and3",
+          "PriceClass": "PriceClass_200",
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "weather-dataset-s3-origin",
+            "ViewerProtocolPolicy": "https-only",
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS"
+            ],
+            "Compress": true,
+            "CachePolicyId": {
+              "Ref": "WeatherDatasetCachePolicy"
+            },
+            "OriginRequestPolicyId": "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf",
+            "ResponseHeadersPolicyId": "5cc3b908-e619-4b99-88e5-2cf7f45965bd"
+          },
+          "Origins": [
+            {
+              "Id": "weather-dataset-s3-origin",
+              "DomainName": {
+                "Ref": "StorageBucketDomainName"
+              },
+              "S3OriginConfig": {
+                "OriginAccessIdentity": ""
+              },
+              "OriginAccessControlId": {
+                "Ref": "OriginAccessControl"
+              }
+            }
+          ],
+          "ViewerCertificate": {
+            "CloudFrontDefaultCertificate": true
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "weather-dataset-cdn"
+          },
+          {
+            "Key": "fcj_workshop1",
+            "Value": "FCJ Workshop 1"
+          }
+        ]
+      }
+    },
+    "S3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "StorageBucketName"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFrontGetObject",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Sub": "arn:aws:s3:::${StorageBucketName}/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WeatherDatasetCDNDistribution}"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "AllowAccountListBucketForPrefixes",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": ["s3:ListBucket"],
+              "Resource": { "Fn::Sub": "arn:aws:s3:::${StorageBucketName}" },
+              "Condition": {
+                "StringLike": {
+                  "aws:PrincipalArn": "arn:aws:iam::${AWS::AccountId}:*",
+                  "s3:prefix": ["dataset/*","glue-scripts/*"]
+                }
+              }
+            },
+            {
+              "Sid": "AllowAccountGetObjectForDatasetAndGlueScripts",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": ["s3:GetObject"],
+              "Resource": [
+                { "Fn::Sub": "arn:aws:s3:::${StorageBucketName}/dataset/*" },
+                { "Fn::Sub": "arn:aws:s3:::${StorageBucketName}/glue-scripts/*" }
+              ],
+              "Condition": {
+                "StringLike": {
+                  "aws:PrincipalArn": "arn:aws:iam::${AWS::AccountId}:*"
+                }
+              }
+            },
+            {
+              "Sid": "DenyExternalGetObjectExceptCloudFront",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": { "Fn::Sub": "arn:aws:s3:::${StorageBucketName}/*" },
+              "Condition": {
+                "StringNotEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WeatherDatasetCDNDistribution}"
+                  }
+                },
+                "StringNotLike": {
+                  "aws:PrincipalArn": "arn:aws:iam::${AWS::AccountId}:*"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "CloudFrontDistributionId": {
+      "Description": "Weather Dataset CloudFront Distribution ID",
+      "Value": {
+        "Ref": "WeatherDatasetCDNDistribution"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-DistributionId"
+        }
+      }
+    },
+    "CloudFrontDomainName": {
+      "Description": "Weather Dataset CloudFront Distribution Domain Name",
+      "Value": {
+        "Fn::GetAtt": [
+          "WeatherDatasetCDNDistribution",
+          "DomainName"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-DomainName"
+        }
+      }
+    },
+    "CloudFrontDistributionArn": {
+      "Description": "Weather Dataset CloudFront Distribution ARN",
+      "Value": {
+        "Fn::Sub": "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WeatherDatasetCDNDistribution}"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-DistributionArn"
+        }
+      }
+    },
+    "OriginAccessControlId": {
+      "Description": "Origin Access Control ID",
+      "Value": {
+        "Ref": "OriginAccessControl"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-OriginAccessControlId"
+        }
+      }
+    }
+  }
+}
