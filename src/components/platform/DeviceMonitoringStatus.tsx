@@ -6,7 +6,15 @@ import { format } from "date-fns";
 import { Wifi, WifiOff, Activity } from "lucide-react";
 
 export default function DeviceMonitoringStatus() {
-  const [deviceStatuses, setDeviceStatuses] = useState<any[]>([]);
+  const [deviceStatuses, setDeviceStatuses] = useState<
+    Array<{
+      deviceId: string;
+      district: string;
+      lastSeen: Date;
+      isOnline: boolean;
+      offlineNotificationSent: boolean;
+    }>
+  >([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {

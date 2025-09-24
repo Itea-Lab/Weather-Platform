@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Satellite } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useTopicContext } from "@/hooks/TopicContext";
 import { clearAllIoTCache } from "@/lib/iotConfig";
 

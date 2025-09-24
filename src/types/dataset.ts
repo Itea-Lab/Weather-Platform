@@ -1,6 +1,6 @@
 export interface Dataset {
   id: string;
-  _time: any;
+  _time: string | Date;
   temperature: number;
   humidity: number;
   pressure: number;

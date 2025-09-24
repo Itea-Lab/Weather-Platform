@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { cardData } from "@/types/sensorData";
+import type { cardData } from "@/types/sensorData";
 import {
   DeviceStatus,
   isDeviceDataStale,

@@ -1,14 +1,26 @@
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import { getAWSRegion } from "./awsConfig";
 
+interface IoTConfig {
+  endpoint: string;
+  region: string;
+  accountId?: string;
+  websocketUrl?: string;
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+}
+
 // Global IoT configuration singleton to prevent duplicate API calls
 class IoTConfigManager {
-  private config: any = null;
-  private configPromise: Promise<any> | null = null;
+  private config: IoTConfig | null = null;
+  private configPromise: Promise<IoTConfig> | null = null;
   private lastFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  async getConfig(): Promise<any> {
+  async getConfig(): Promise<IoTConfig> {
     const now = Date.now();
 
     // Return cached config if valid
@@ -36,7 +48,7 @@ class IoTConfigManager {
     }
   }
 
-  private async fetchConfig(): Promise<any> {
+  private async fetchConfig(): Promise<IoTConfig> {
     // Get endpoint and region from API
     const response = await fetch("/api/iot/endpoint", {
       method: "GET",
@@ -54,7 +66,7 @@ class IoTConfigManager {
     }
 
     // Get AWS credentials for PubSub
-    const { region, credentials, identityId } = await getAWSCredentials();
+    const { credentials } = await getAWSCredentials();
 
     return {
       endpoint: `wss://${data.endpoint}/mqtt`,
@@ -83,9 +95,25 @@ let pendingRequest: Promise<string> | null = null; // Prevent race conditions
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes cache
 
 // Cache for AWS credentials to prevent multiple auth calls
-let cachedCredentials: any = null;
+let cachedCredentials: {
+  region: string;
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+  identityId?: string;
+} | null = null;
 let credentialsCacheTimestamp: number = 0;
-let pendingCredentialsRequest: Promise<any> | null = null;
+let pendingCredentialsRequest: Promise<{
+  region: string;
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+  identityId?: string;
+}> | null = null;
 const CREDENTIALS_CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes cache (shorter than typical token expiry)
 
 /**
@@ -110,7 +138,7 @@ async function getAWSCredentials() {
   pendingCredentialsRequest = (async () => {
     try {
       // First verify user is authenticated
-      const currentUser = await getCurrentUser();
+      await getCurrentUser();
 
       // Get auth session with proper error handling and retries
       let session;
@@ -382,7 +410,7 @@ export async function refreshAuthForIoT(): Promise<boolean> {
  */
 export async function getIoTConfig(customTopic?: string) {
   try {
-    const { region, credentials, identityId } = await getAWSCredentials();
+    const { region, credentials } = await getAWSCredentials();
     const endpoint = await getIoTEndpoint();
     const finalTopic = customTopic; // Use ONLY the custom topic, no fallback
 

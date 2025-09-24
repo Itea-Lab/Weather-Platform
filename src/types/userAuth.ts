@@ -19,7 +19,7 @@ export interface AuthRetryOptions {
 }
 
 export interface LegacyAuthResult {
-  user: any | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   attempt: number;
   tokensPresent?: boolean;
@@ -57,22 +57,34 @@ export interface AmplifyAuthConfig {
 }
 
 // Type guard functions
-export function isValidAuthUser(user: any): user is AuthUser {
-  return (
+export function isValidAuthUser(user: unknown): user is AuthUser {
+  return Boolean(
     user &&
-    typeof user.username === "string" &&
-    typeof user.email === "string" &&
-    typeof user.userId === "string"
+      typeof user === "object" &&
+      user !== null &&
+      "username" in user &&
+      "email" in user &&
+      "userId" in user &&
+      typeof (user as AuthUser).username === "string" &&
+      typeof (user as AuthUser).email === "string" &&
+      typeof (user as AuthUser).userId === "string"
   );
 }
 
-export function isValidJWTPayload(payload: any): payload is JWTPayload {
-  return (
+export function isValidJWTPayload(payload: unknown): payload is JWTPayload {
+  return Boolean(
     payload &&
-    typeof payload.sub === "string" &&
-    typeof payload.email === "string" &&
-    typeof payload.exp === "number" &&
-    typeof payload.iss === "string" &&
-    typeof payload.aud === "string"
+      typeof payload === "object" &&
+      payload !== null &&
+      "sub" in payload &&
+      "email" in payload &&
+      "exp" in payload &&
+      "iss" in payload &&
+      "aud" in payload &&
+      typeof (payload as JWTPayload).sub === "string" &&
+      typeof (payload as JWTPayload).email === "string" &&
+      typeof (payload as JWTPayload).exp === "number" &&
+      typeof (payload as JWTPayload).iss === "string" &&
+      typeof (payload as JWTPayload).aud === "string"
   );
 }

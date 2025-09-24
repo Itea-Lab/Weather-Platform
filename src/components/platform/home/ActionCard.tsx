@@ -1,10 +1,4 @@
-import {
-  BarChart3,
-  Database,
-  Plus,
-  Settings,
-  MessageSquareDot,
-} from "lucide-react";
+import { BarChart3, Database, Plus } from "lucide-react";
 
 import Link from "next/link";
 

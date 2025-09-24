@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { cardData } from "@/types/sensorData";
 import { useDeviceStatus } from "@/hooks/useDeviceStatus";
 import {
@@ -34,8 +33,7 @@ export default function WeatherCard({
   isConnected,
 }: WeatherCardProps) {
   // Use the global device status hook
-  const { isDataStale, getTimeSinceUpdate, currentDeviceStatus } =
-    useDeviceStatus(data);
+  const { isDataStale, getTimeSinceUpdate } = useDeviceStatus(data);
 
   const getIcon = () => {
     switch (icon) {

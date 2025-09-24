@@ -1,4 +1,4 @@
-import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
+import { STSClient } from "@aws-sdk/client-sts";
 import { LambdaClient } from "@aws-sdk/client-lambda";
 import { IoTClient } from "@aws-sdk/client-iot";
 

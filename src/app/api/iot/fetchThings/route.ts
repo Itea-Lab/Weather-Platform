@@ -19,9 +19,11 @@ export async function GET() {
       const amplifyOutputs = await import(
         "../../../../../amplify_outputs.json"
       );
-      const customOutputs = (amplifyOutputs as any).custom;
+      const customOutputs = (
+        amplifyOutputs as { custom?: { fetchThingsFunctionName?: string } }
+      ).custom;
       functionName = customOutputs?.fetchThingsFunctionName || "fetchThings";
-    } catch (error) {
+    } catch {
       console.warn(
         "Could not load amplify outputs, using default function name"
       );

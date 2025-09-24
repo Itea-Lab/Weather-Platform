@@ -8,7 +8,7 @@ import useSWR, { SWRConfiguration } from "swr";
 /**
  * Standard error normalization for API hooks
  */
-export function normalizeError(error: any): Error | null {
+export function normalizeError(error: unknown): Error | null {
   if (!error) return null;
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -136,8 +136,10 @@ export const standardFetcher = async (url: string) => {
       const errorData = await res
         .json()
         .catch(() => ({ error: res.statusText }));
-      const error = new Error(errorData.error || "API request failed");
-      (error as any).status = res.status;
+      const error = new Error(
+        errorData.error || "API request failed"
+      ) as Error & { status: number };
+      error.status = res.status;
       throw error;
     }
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Download, MapPin, Clock, RefreshCw } from "lucide-react";
 import DatasetFilters from "./DataFilter";
 import { useWeatherDatasets, downloadDatasetFile } from "@/lib/api";
-import { DatasetInfo } from "@/types/dataset";
+import type { DatasetInfo } from "@/types/dataset";
 
 interface WeatherDataset {
   district: string;

@@ -1,8 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { sharedPubSubManager } from "@/lib/sharedPubSubManager";
-import {
+import type {
   NotificationMessage,
   DeviceStatusNotification,
 } from "@/types/notification";
@@ -40,33 +46,34 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   };
 
   // Add notification to the list
-  const addNotification = (notification: NotificationMessage) => {
+  const addNotification = useCallback((notification: NotificationMessage) => {
     setNotifications((prev) => [notification, ...prev].slice(0, 100)); // Keep only last 100 notifications
-  };
+  }, []);
 
   // Create notification from device status update
-  const createDeviceStatusNotification = (
-    statusUpdate: DeviceStatusNotification
-  ): NotificationMessage => {
-    const isOffline = statusUpdate.status === "offline";
+  const createDeviceStatusNotification = useCallback(
+    (statusUpdate: DeviceStatusNotification): NotificationMessage => {
+      const isOffline = statusUpdate.status === "offline";
 
-    return {
-      id: generateNotificationId(),
-      type: isOffline ? "device_offline" : "device_online",
-      deviceId: statusUpdate.deviceId,
-      district: statusUpdate.district,
-      message: isOffline
-        ? `Device ${statusUpdate.deviceId} in ${statusUpdate.district} has gone offline`
-        : `Device ${statusUpdate.deviceId} in ${statusUpdate.district} is back online`,
-      timestamp: statusUpdate.timestamp,
-      severity: isOffline ? "high" : "medium",
-      acknowledged: false,
-      metadata: {
-        lastSeen: statusUpdate.lastSeen,
-        offlineDuration: statusUpdate.offlineDuration,
-      },
-    };
-  };
+      return {
+        id: generateNotificationId(),
+        type: isOffline ? "device_offline" : "device_online",
+        deviceId: statusUpdate.deviceId,
+        district: statusUpdate.district,
+        message: isOffline
+          ? `Device ${statusUpdate.deviceId} in ${statusUpdate.district} has gone offline`
+          : `Device ${statusUpdate.deviceId} in ${statusUpdate.district} is back online`,
+        timestamp: statusUpdate.timestamp,
+        severity: isOffline ? "high" : "medium",
+        acknowledged: false,
+        metadata: {
+          lastSeen: statusUpdate.lastSeen,
+          offlineDuration: statusUpdate.offlineDuration,
+        },
+      };
+    },
+    []
+  );
 
   // Mark notification as read
   const markAsRead = (notificationId: string) => {
@@ -108,23 +115,42 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         // Subscribe using shared PubSub manager
         subscriptionKey = await sharedPubSubManager.subscribe(
           [IOT_TOPICS.NOTIFICATIONS],
-          (message: any) => {
+          (message: unknown) => {
+            // console.log(`Notification received on topic ${IOT_TOPICS.NOTIFICATIONS}:`, message);
             try {
-              const data = message.value || message;
+              const rawData =
+                (message as { value?: unknown })?.value || message;
+
+              // Type guard to ensure data is an object
+              if (!rawData || typeof rawData !== "object") {
+                console.warn("Invalid notification message format:", rawData);
+                return;
+              }
+
+              const data = rawData as Record<string, unknown>;
 
               // Handle different types of notification messages
               if (data.type === "device_status") {
                 // Device status update
-                const statusUpdate: DeviceStatusNotification = data;
+                const statusUpdate =
+                  data as unknown as DeviceStatusNotification;
+                // console.log(`Received device status notification:`, statusUpdate);
                 const notification =
                   createDeviceStatusNotification(statusUpdate);
                 addNotification(notification);
               } else if (data.type === "notification") {
                 // Direct notification message
                 const notification: NotificationMessage = {
-                  ...data,
-                  id: data.id || generateNotificationId(),
+                  id: (data.id as string) || generateNotificationId(),
+                  type: "system_alert",
+                  deviceId: (data.deviceId as string) || "system",
+                  message: (data.message as string) || "Unknown notification",
+                  timestamp:
+                    (data.timestamp as string) || new Date().toISOString(),
+                  severity:
+                    (data.severity as NotificationMessage["severity"]) || "low",
                   acknowledged: false,
+                  metadata: data as Record<string, string | number | boolean>,
                 };
                 addNotification(notification);
               } else {
@@ -132,17 +158,19 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
                 const notification: NotificationMessage = {
                   id: generateNotificationId(),
                   type: "system_alert",
-                  deviceId: data.deviceId || "system",
-                  message: data.message || JSON.stringify(data),
-                  timestamp: data.timestamp || new Date().toISOString(),
-                  severity: data.severity || "low",
+                  deviceId: (data.deviceId as string) || "system",
+                  message: (data.message as string) || JSON.stringify(data),
+                  timestamp:
+                    (data.timestamp as string) || new Date().toISOString(),
+                  severity:
+                    (data.severity as NotificationMessage["severity"]) || "low",
                   acknowledged: false,
-                  metadata: data,
+                  metadata: data as Record<string, string | number | boolean>,
                 };
                 addNotification(notification);
               }
-            } catch (parseError) {
-              console.error("Error parsing notification message:", parseError);
+            } catch (error) {
+              console.error("Error parsing notification message:", error);
             }
           }
         );
@@ -150,9 +178,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         setIsConnected(true);
         setError(null);
         setIsLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to subscribe to notifications:", err);
-        setError(err.message || "Failed to connect to notifications");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to connect to notifications"
+        );
         setIsConnected(false);
         setIsLoading(false);
       }
@@ -166,7 +198,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         sharedPubSubManager.unsubscribe(subscriptionKey);
       }
     };
-  }, []);
+  }, [addNotification, createDeviceStatusNotification]);
 
   const contextValue: NotificationContextType = {
     notifications,

@@ -35,9 +35,9 @@ export class DeviceStatusMonitor {
     try {
       // Start monitoring device activity
       this.startMonitoring();
-      console.log("Device Status Monitor initialized");
+      console.log("Device Status Monitor initialized and monitoring started");
     } catch (error) {
-      console.error("Failed to initialize Device Status Monitor:", error);
+      console.error("❌ Failed to initialize Device Status Monitor:", error);
     }
   }
 
@@ -53,6 +53,8 @@ export class DeviceStatusMonitor {
     if (isRecentActivity(timestamp)) {
       const wasOffline = this.deviceActivity.get(deviceId)?.isOnline === false;
 
+      // console.log(`Recording activity for device ${deviceId} in ${district} at ${dataTime.toISOString()}`);
+
       this.deviceActivity.set(deviceId, {
         deviceId,
         district,
@@ -63,6 +65,7 @@ export class DeviceStatusMonitor {
 
       // If device was offline and now online, publish online notification
       if (wasOffline) {
+        // console.log(`Device ${deviceId} came back online`);
         this.publishDeviceStatusNotification(
           deviceId,
           district,
@@ -82,6 +85,8 @@ export class DeviceStatusMonitor {
   private checkDeviceStatuses() {
     const now = new Date();
 
+    // console.log(`Checking ${this.deviceActivity.size} device statuses...`);
+
     this.deviceActivity.forEach((activity, deviceId) => {
       const timeSinceLastSeen = now.getTime() - activity.lastSeen.getTime();
 
@@ -94,6 +99,10 @@ export class DeviceStatusMonitor {
         !activity.offlineNotificationSent
       ) {
         activity.offlineNotificationSent = true;
+
+        console.log(
+          `Device ${deviceId} offline detected! Time since last seen: ${timeSinceLastSeen}ms`
+        );
 
         this.publishDeviceStatusNotification(
           deviceId,

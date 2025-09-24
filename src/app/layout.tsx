@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";

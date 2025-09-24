@@ -3,7 +3,7 @@ import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import { IoTClient, DescribeEndpointCommand } from "@aws-sdk/client-iot";
 import { invokeLambda } from "@/lib/lambdaInvoker";
 
-export async function GET(request: Request) {
+export async function GET() {
   console.log("Getting IoT endpoint for account...");
 
   // Try Lambda function first (which has proper IAM permissions and region detection)

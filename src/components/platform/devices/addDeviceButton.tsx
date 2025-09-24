@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { registerDevice } from "@/lib/api";
-import { DeviceRegistrationResponse } from "@/types/device";
+import type { DeviceRegistrationResponse } from "@/types/device";
 
 type DialogStep = "add-device" | "registration-result";
 

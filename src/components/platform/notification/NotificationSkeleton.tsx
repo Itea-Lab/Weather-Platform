@@ -38,9 +38,7 @@ export function NotificationSkeleton({ count = 3 }: NotificationSkeletonProps) {
   );
 }
 
-interface ConnectionSkeletonProps {}
-
-export function ConnectionSkeleton({}: ConnectionSkeletonProps) {
+export function ConnectionSkeleton() {
   return (
     <div className="bg-white rounded-lg shadow p-6 animate-pulse">
       <div className="flex justify-between items-center">

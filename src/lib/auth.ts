@@ -242,7 +242,7 @@ async function verifyJWTSignature(
     );
 
     return isValid;
-  } catch (error) {
+  } catch {
     // Signature verification can fail due to network issues - this is handled gracefully
     console.log("Signature verification failed (using secure fallback)");
     return false;
@@ -292,7 +292,7 @@ export async function authenticateSecure(
             error: "Invalid token signature",
           };
         }
-      } catch (signatureError) {
+      } catch {
         // If signature verification fails due to network issues,
         // log info and proceed with structure validation only (still secure)
         console.log(

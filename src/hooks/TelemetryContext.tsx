@@ -8,8 +8,16 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { cardData, WindData, RainData } from "@/types/sensorData";
-import { TelemetryContextType, TelemetryProviderProps } from "@/types/telemetry";
+import type {
+  cardData,
+  WindData,
+  RainData,
+  TelemetryPayload,
+} from "@/types/sensorData";
+import type {
+  TelemetryContextType,
+  TelemetryProviderProps,
+} from "@/types/telemetry";
 import { getWeatherTopic } from "@/lib/iotConfig";
 import { useTopicContext } from "@/hooks/TopicContext";
 import { deviceStatusMonitor } from "@/lib/deviceStatusMonitor";
@@ -41,7 +49,7 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
   }, [selectedTopic]);
 
   const transformMessage = useCallback(
-    (payload: any) => {
+    (payload: TelemetryPayload) => {
       const rawTemp = payload.data?.temperature;
       const rawHumidity = payload.data?.humidity;
       const rawPressure = payload.data?.pressure;
@@ -54,13 +62,15 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
       // Transform and validate the data according to correct types
       const transformedData: cardData = {
         id: Date.now(),
-        timestamp: payload.timestamp,
+        timestamp: payload.timestamp || new Date().toISOString(),
         temperature: typeof rawTemp === "number" ? rawTemp : 0,
         humidity: typeof rawHumidity === "number" ? rawHumidity : 0,
         pressure: typeof rawPressure === "number" ? rawPressure : 0,
         avgWindSpeed: typeof rawAvgWind === "number" ? rawAvgWind : 0,
         maxWindSpeed: typeof rawMaxWind === "number" ? rawMaxWind : 0,
         windDirection: typeof rawWindDir === "number" ? rawWindDir : 0,
+        rainfall1hr: typeof rawRain1hr === "number" ? rawRain1hr : undefined,
+        rainfall24hr: typeof rawRain24hr === "number" ? rawRain24hr : undefined,
       };
 
       // Update weather card data
@@ -74,7 +84,7 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
       ) {
         const windEntry: WindData = {
           id: Date.now() + 1,
-          timestamp: payload.timestamp,
+          timestamp: payload.timestamp || new Date().toISOString(),
           avgWindSpeed: rawAvgWind,
           maxWindSpeed: rawMaxWind,
           windDirection: rawWindDir,
@@ -87,7 +97,7 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
       if (typeof rawRain1hr === "number" && typeof rawRain24hr === "number") {
         const rainEntry: RainData = {
           id: Date.now() + 2,
-          timestamp: payload.timestamp,
+          timestamp: payload.timestamp || new Date().toISOString(),
           rainFallbyHour: rawRain1hr,
           rainFallbyDay: rawRain24hr,
         };
@@ -141,19 +151,24 @@ export function TelemetryProvider({ children }: TelemetryProviderProps) {
         // Use shared PubSub manager for telemetry subscription
         subscriptionKey = await sharedPubSubManager.subscribe(
           [weatherTopic],
-          (data: any) => {
+          (data: unknown) => {
             try {
-              const payload = data.value || data;
-              if (payload && payload.data) {
-                transformMessage(payload);
+              const payload = (data as { value?: unknown })?.value || data;
+              if (
+                payload &&
+                typeof payload === "object" &&
+                payload !== null &&
+                "data" in payload
+              ) {
+                transformMessage(payload as TelemetryPayload);
                 setIsConnected(true);
                 setIsLoading(false);
               }
             } catch (err) {
-            //   console.error(
-            //     "[TelemetryContext] Error processing message:",
-            //     err
-            //   );
+              //   console.error(
+              //     "[TelemetryContext] Error processing message:",
+              //     err
+              //   );
               setError(
                 err instanceof Error
                   ? err

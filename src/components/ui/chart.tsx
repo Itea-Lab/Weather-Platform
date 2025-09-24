@@ -8,13 +8,12 @@ import { ReactElement } from "react";
 
 export function ChartContainer({
   children,
-  config,
 }: {
   children: ReactElement;
-  config: ChartConfig;
+  config?: ChartConfig;
 }) {
   return (
-    <div style={{ width: "100%", height: 300 }}>
+    <div className="w-full h-[300px]">
       <ResponsiveContainer>{children}</ResponsiveContainer>
     </div>
   );
@@ -22,7 +21,7 @@ export function ChartContainer({
 
 export function ChartTooltip({
   content,
-  ...props 
+  ...props
 }: TooltipProps<number, string> & {
   content: ReactNode;
 }) {
@@ -33,7 +32,11 @@ export function ChartTooltipContent({
   payload,
   hideLabel,
 }: {
-  payload?: any[];
+  payload?: Array<{
+    payload: { month: string };
+    name: string;
+    value: string | number;
+  }>;
   hideLabel?: boolean;
 }) {
   if (!payload || payload.length === 0) return null;

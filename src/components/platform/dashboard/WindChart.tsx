@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTelemetry } from "@/hooks/TelemetryContext";
 import {
   LineChart,
@@ -68,12 +68,20 @@ export default function WindChart() {
   }, [windData, currentTime]);
 
   // Simple tooltip component (inline since it's not complex)
-  const TooltipContent = ({ active, payload, label }: any) => {
+  const TooltipContent = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number; dataKey: string }>;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-2 border rounded shadow">
           <p className="font-semibold">{`Time: ${label}`}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index: number) => (
             <p key={index} className="text-blue-600">
               {`${entry.dataKey}: ${entry.value}${
                 entry.dataKey.includes("Speed") ? " m/s" : "°"

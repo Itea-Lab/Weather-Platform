@@ -6,13 +6,6 @@ import { useDevicesWithStatus } from "@/hooks/useDevicesWithStatus";
 import { useNotifications } from "@/hooks/NotificationContext";
 import { useTotalReadings } from "@/lib/api";
 
-interface Statistic {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  loading?: boolean;
-}
-
 export default function StatisticCard() {
   const { devices, isLoading: devicesLoading } = useDevicesWithStatus();
   const { notifications } = useNotifications();

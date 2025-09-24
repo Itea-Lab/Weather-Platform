@@ -9,7 +9,7 @@ class SharedPubSubManager {
   private static instance: SharedPubSubManager | null = null;
   private pubsub: PubSub | null = null;
   private isInitializing = false;
-  private activeSubscriptions = new Map<string, any>();
+  private activeSubscriptions = new Map<string, { unsubscribe: () => void }>();
 
   private constructor() {}
 
@@ -58,7 +58,7 @@ class SharedPubSubManager {
 
   async subscribe(
     topics: string[],
-    callback: (message: any) => void
+    callback: (message: unknown) => void
   ): Promise<string> {
     const pubsub = await this.getPubSub();
     const subscriptionKey = topics.sort().join(",");
@@ -73,7 +73,7 @@ class SharedPubSubManager {
 
     const subscription = pubsub.subscribe({ topics }).subscribe({
       next: callback,
-      error: (error: any) => {
+      error: (error: unknown) => {
         console.error("PubSub subscription error:", error);
         // Remove failed subscription
         this.activeSubscriptions.delete(subscriptionKey);
@@ -84,13 +84,16 @@ class SharedPubSubManager {
     return subscriptionKey;
   }
 
-  async publish(topic: string, message: any): Promise<void> {
+  async publish(
+    topic: string,
+    message: Record<string, unknown>
+  ): Promise<void> {
     const pubsub = await this.getPubSub();
 
     try {
       console.log(`Publishing to topic: ${topic}`);
 
-      const result = await pubsub.publish({
+      await pubsub.publish({
         topics: [topic],
         message: message,
       });
@@ -113,7 +116,7 @@ class SharedPubSubManager {
 
   cleanup(): void {
     // Unsubscribe from all active subscriptions
-    for (const [key, subscription] of this.activeSubscriptions) {
+    for (const [, subscription] of this.activeSubscriptions) {
       subscription.unsubscribe();
     }
     this.activeSubscriptions.clear();

@@ -1,7 +1,6 @@
 "use client";
 
 import useSWR from "swr";
-import { useMemo } from "react";
 import { cardData, WindData, RainData } from "@/types/sensorData";
 import { Dataset, WeatherDatasetResponse } from "@/types/dataset";
 import {
@@ -115,7 +114,7 @@ export function useDatasetData(
   };
 }
 
-export async function deleteDatapoint(timestamp: any) {
+export async function deleteDatapoint(timestamp: string | number) {
   try {
     const response = await fetch("/api/weather/deleteData", {
       method: "POST",

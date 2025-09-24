@@ -12,7 +12,7 @@ export interface NotificationMessage {
     offlineDuration?: number;
     expectedValue?: number;
     actualValue?: number;
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
   };
 }
 

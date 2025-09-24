@@ -2,20 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { invokeLambda } from "@/lib/lambdaInvoker";
 import outputs from "../../../../../amplify_outputs.json";
 
-interface DatasetInfo {
-  latest_update: string;
-  url: string;
-}
-
-interface DatasetResponse {
-  datasets: Record<string, DatasetInfo>;
-}
-
 export async function GET(request: NextRequest) {
   try {
     // Check if the getDataset Lambda function is available
     const amplifyOutputs = await import("../../../../../amplify_outputs.json");
-    const customOutputs = (amplifyOutputs as any).custom;
+    const customOutputs = (
+      amplifyOutputs as { custom?: { getDatasetFunctionName?: string } }
+    ).custom;
 
     if (!customOutputs?.getDatasetFunctionName) {
       // Return mock data when Lambda function is not deployed

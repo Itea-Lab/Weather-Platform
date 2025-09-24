@@ -14,9 +14,11 @@ export async function getAmplifyFunctionName(): Promise<string> {
 
   try {
     const amplifyOutputs = await import("../../amplify_outputs.json");
-    const customOutputs = (amplifyOutputs as any).custom;
+    const customOutputs = (
+      amplifyOutputs as { custom?: { addThingFunctionName?: string } }
+    ).custom;
     return customOutputs?.addThingFunctionName || defaultName;
-  } catch (error) {
+  } catch {
     console.warn(
       "Could not load amplify outputs, using default function name:",
       defaultName
@@ -32,9 +34,11 @@ export async function getAmplifyDeleteFunctionName(): Promise<string> {
 
   try {
     const amplifyOutputs = await import("../../amplify_outputs.json");
-    const customOutputs = (amplifyOutputs as any).custom;
+    const customOutputs = (
+      amplifyOutputs as { custom?: { deleteThingFunctionName?: string } }
+    ).custom;
     return customOutputs?.deleteThingFunctionName || defaultName;
-  } catch (error) {
+  } catch {
     console.warn(
       "Could not load amplify outputs for delete function, using default:",
       defaultName
@@ -106,14 +110,16 @@ export async function invokeDeleteThingLambdaServerSide(payload: {
 }
 
 // Generic Lambda invoker function
-export async function invokeLambda(functionNameKey: string, payload: any) {
+export async function invokeLambda(functionNameKey: string, payload: unknown) {
   try {
     // Get pre-configured Lambda client with environment region
     const lambdaClient = createLambdaClientWithEnvRegion();
 
     // Get the actual function name from amplify outputs
     const amplifyOutputs = await import("../../amplify_outputs.json");
-    const customOutputs = (amplifyOutputs as any).custom;
+    const customOutputs = (
+      amplifyOutputs as { custom?: Record<string, string> }
+    ).custom;
     const functionName = customOutputs?.[functionNameKey];
 
     if (!functionName) {

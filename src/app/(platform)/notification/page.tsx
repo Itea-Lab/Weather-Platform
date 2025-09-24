@@ -23,7 +23,6 @@ export default function NotificationPage() {
   const {
     notifications,
     unreadCount,
-    isConnected,
     isLoading,
     error,
     markAsRead,

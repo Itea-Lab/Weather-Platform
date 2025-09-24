@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AuthUser,
+  type AuthUser,
   getCurrentUser,
   signIn,
   signOut,
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser || null);
-    } catch (error) {
+    } catch {
       // User is not authenticated or Amplify failed to initialize
       setUser(null);
     } finally {

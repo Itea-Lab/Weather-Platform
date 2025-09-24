@@ -1,4 +1,4 @@
-import React from "react";
+import { ReactNode } from "react";
 
 export interface TelemetryContextType {
   // Weather card data
@@ -19,5 +19,5 @@ export interface TelemetryContextType {
 }
 
 export interface TelemetryProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }

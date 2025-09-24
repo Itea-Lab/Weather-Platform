@@ -16,7 +16,7 @@ export async function DELETE(request: Request) {
     let requestBody;
     try {
       requestBody = await request.json();
-    } catch (parseError) {
+    } catch {
       return NextResponse.json(
         {
           error: "Invalid request format",

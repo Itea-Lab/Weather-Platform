@@ -87,7 +87,9 @@ export function getAllTopics() {
  * Check if a topic is valid
  */
 export function isValidTopic(topic: string): boolean {
-  return Object.values(IOT_TOPICS).includes(topic as any);
+  return Object.values(IOT_TOPICS).includes(
+    topic as (typeof IOT_TOPICS)[keyof typeof IOT_TOPICS]
+  );
 }
 
 /**

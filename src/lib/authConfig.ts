@@ -1,5 +1,5 @@
 import amplifyOutputs from "../../amplify_outputs.json";
-import { AmplifyAuthConfig } from "@/types/userAuth";
+import type { AmplifyAuthConfig } from "@/types/userAuth";
 
 /**
  * Extract authentication configuration from Amplify outputs

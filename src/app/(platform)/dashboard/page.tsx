@@ -11,8 +11,7 @@ export default function DashboardPage() {
   usePageTitle("Dashboard");
 
   // Use global telemetry context instead of local hook
-  const { weatherData, windData, rainData, error, isLoading, isConnected } =
-    useTelemetry();
+  const { weatherData, error, isLoading, isConnected } = useTelemetry();
 
   return (
     <div className="space-y-6">
