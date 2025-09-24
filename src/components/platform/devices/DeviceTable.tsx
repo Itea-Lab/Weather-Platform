@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { deleteDevice } from "@/lib/api";
 import { useDevicesWithStatus } from "@/hooks/useDevicesWithStatus";
 import DeviceFilter from "./DeviceFilter";
-import { Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, Trash2, RefreshCw } from "lucide-react";
 
 interface DeleteConfirmDialogProps {
   isOpen: boolean;
@@ -86,6 +86,7 @@ export default function DeviceTable() {
     deviceName: string;
   }>({ isOpen: false, deviceName: "" });
   const [deletingDevice, setDeletingDevice] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filter devices based on selected filters
   const filteredDevices = useMemo(() => {
@@ -127,6 +128,17 @@ export default function DeviceTable() {
     setDeleteDialog({ isOpen: false, deviceName: "" });
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await mutate();
+    } catch (error) {
+      console.error("Failed to refresh devices:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -156,21 +168,39 @@ export default function DeviceTable() {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {/* Header section with title and filter */}
         <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Connected Devices
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {isLoading
-                  ? "Loading..."
-                  : `${filteredDevices.length} devices total`}
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Connected Devices
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {isLoading
+                    ? "Loading..."
+                    : `${filteredDevices.length} devices total`}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <DeviceFilter
+                  onGroupChange={setGroupFilter}
+                  onStatusChange={setStatusFilter}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing || isLoading}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${
+                        isRefreshing ? "animate-spin" : ""
+                      }`}
+                    />
+                    Refresh
+                  </button>
+                </div>
+              </div>
             </div>
-            <DeviceFilter
-              onGroupChange={setGroupFilter}
-              onStatusChange={setStatusFilter}
-            />
           </div>
         </div>
 

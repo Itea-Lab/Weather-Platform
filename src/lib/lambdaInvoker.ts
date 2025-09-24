@@ -10,7 +10,7 @@ function createLambdaClientWithEnvRegion(): LambdaClient {
 
 // Server-side function that can read amplify outputs for add thing
 export async function getAmplifyFunctionName(): Promise<string> {
-  const defaultName = process.env.ADD_THING_LAMBDA_FUNCTION_NAME || "add-thing";
+  const defaultName = "add-thing";
 
   try {
     const amplifyOutputs = await import("../../amplify_outputs.json");
@@ -29,8 +29,7 @@ export async function getAmplifyFunctionName(): Promise<string> {
 
 // Server-side function that can read amplify outputs for delete thing
 export async function getAmplifyDeleteFunctionName(): Promise<string> {
-  const defaultName =
-    process.env.DELETE_THING_LAMBDA_FUNCTION_NAME || "delete-thing";
+  const defaultName = "delete-thing";
 
   try {
     const amplifyOutputs = await import("../../amplify_outputs.json");

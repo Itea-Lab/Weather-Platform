@@ -43,9 +43,10 @@ next-env.d.ts
 
 gen_hash.ts
 
-# Amplify Gen 2 - Security Critical
-amplify_outputs.json
-.amplify/
+# Amplify Gen 2 Security
+.amplify
+amplify_outputs*
+amplifyconfiguration*
 .aws-sam/
 cdk.out/
 .cdk.staging/

@@ -82,8 +82,8 @@ export const getDataset = defineFunction({
   name: "get-dataset",
   entry: "./handler.ts",
   environment: {
-    // Add any environment variables your function needs
-    INFLUXDB_BUCKET: "weather_data",
+    // Environment variables are automatically provided by Amplify
+    // Access S3 bucket and IoT resources through Amplify outputs
   },
   timeoutSeconds: 30,
   memoryMB: 256,
@@ -138,16 +138,19 @@ Create `amplify/functions/getDataset/handler.ts`:
 
 ```typescript
 import type { Handler } from "aws-lambda";
-import { env } from "$amplify/env/get-dataset";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 export const handler: Handler = async (event, context) => {
   console.log("Event received:", JSON.stringify(event, null, 2));
 
   try {
-    // Access environment variables
-    const bucketName = env.INFLUXDB_BUCKET;
+    // Initialize AWS clients
+    const s3Client = new S3Client({ region: process.env.AWS_REGION });
 
-    // Your business logic here
+    // Access dataset from S3 storage
+    // Bucket name and other resources are available through Amplify configuration
+
+    // Your business logic here - interact with S3, DynamoDB, etc.
 
     return {
       statusCode: 200,

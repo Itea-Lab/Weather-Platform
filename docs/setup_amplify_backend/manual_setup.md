@@ -15,18 +15,30 @@ Sandboxes are identical in fidelity to your production environments. Code change
 
 ## Special Case for Next.js Apps Using pnpm
 
-### create-amplify Doesn't Support pnpm on Windows
+### Amplify Gen 2 vs Gen 1 CLI Tools
 
-The tool throws this error:
+**Important Distinction:**
+- `amplify` CLI = **Amplify Gen 1** (legacy, not supported for new projects)
+- `ampx` CLI = **Amplify Gen 2** (current, what we use)
+
+### pnpm Not Supported on Windows for Amplify
+
+Both `create-amplify` and the legacy `amplify` CLI throw this error on Windows:
 
 ```
 "Amplify does not support PNPM on Windows."
 ```
 
-**Why?**
-Because create-amplify uses nested node_modules, which conflicts with pnpm's flat symlink architecture on Windows.
+Because Amplify tooling uses nested node_modules, which conflicts with pnpm's flat symlink architecture on Windows.
 
-**Important:** You cannot use `create-amplify` or `amplify init` directly on Windows if your project uses pnpm. The tool explicitly throws and halts, so it won't scaffold the backend for you.
+**Important:** You cannot use:
+- `create-amplify` (Gen 2 scaffolding tool)
+- `amplify init` (Gen 1 legacy command)
+- Any `amplify` commands (these are Gen 1 only)
+
+**However:** `npx ampx` commands (Gen 2) work fine for deployment and management - only the initial scaffolding tools have this limitation.
+
+**Current Solution:** Use manual setup with `npx ampx` commands for deployment and management, while keeping pnpm for dependency management.
 
 ## Step 1: Install Amplify Packages
 
@@ -34,7 +46,18 @@ Add amplify packages to your current project:
 
 ```bash
 pnpm add -D @aws-amplify/backend @aws-amplify/backend-cli typescript aws-cdk-lib constructs @aws-amplify/adapter-nextjs
+
+**Note**: Install the Amplify Gen 2 CLI globally using npm (works on all platforms):
+
+```bash
+# Install Amplify Gen 2 CLI (ampx)
+npm install -g @aws-amplify/backend-cli
+
+# DO NOT install the legacy Gen 1 CLI:
+# npm install -g @aws-amplify/cli  ❌ (This is Gen 1, deprecated)
 ```
+
+**Important:** Always use `ampx` commands, never `amplify` commands (Gen 1).
 
 ## Step 2: Create Amplify Working Directory
 
@@ -242,9 +265,19 @@ aws configure list
 # List all profiles
 aws configure list-profiles
 
-# Check sandbox status
+# Check sandbox status (Gen 2)
 npx ampx sandbox
 
-# View sandbox logs
+# View sandbox logs (Gen 2)
 npx ampx sandbox --debug
+
+# Check Amplify Gen 2 CLI version
+npx ampx --version
+
+# ❌ DO NOT USE Gen 1 commands:
+# amplify status     ❌ (Gen 1 legacy)
+# amplify push       ❌ (Gen 1 legacy)
+# amplify init       ❌ (Gen 1 legacy)
 ```
+
+**Remember:** Always use `ampx` (Gen 2) commands, never `amplify` (Gen 1) commands.

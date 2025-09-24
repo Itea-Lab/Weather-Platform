@@ -1,6 +1,6 @@
 # Weather Platform Authentication
 
-This document explains how authentication works end-to-end on the Weather Platform, from Amplify backend definition to client-side page access and API authentication.
+This document explains how the weather platform handles authentication using **AWS Amplify Gen 2 with Amazon Cognito**. The system provides seamless authentication for both client-side pages and server-side API routes.
 
 ## Complete Authentication Flow
 
@@ -51,23 +51,23 @@ The platform uses React Context to manage authentication state globally:
 - confirmSignIn(): Handles forced password changes
 ```
 
-### 4. Two Different Authentication Flows
+### 4. Two Authentication Layers
 
-Your platform has **two distinct authentication systems**:
+The platform implements **two complementary authentication layers**:
 
-#### A. Page Access Authentication (Client-Side)
+#### A. Client-Side Authentication (Page Access)
 
 **Purpose**: Controls access to `/platform/*` pages  
-**Method**: React Context + Protected Routes  
-**Performance**: Instant (client-side)  
-**Storage**: Uses Amplify's automatic token management
+**Method**: Amplify `getCurrentUser()` + React Context + Protected Routes  
+**Performance**: Instant (client-side, no network calls)  
+**Storage**: HTTP-only cookies managed automatically by Amplify
 
-#### B. API Authentication (Server-Side)
+#### B. Server-Side Authentication (API Protection)
 
 **Purpose**: Secures API routes (`/api/iot/*`, `/api/weather/*`)  
-**Method**: Edge Runtime compatible JWT parsing with Web Crypto API  
-**Performance**: ~9000ms per request  
-**Storage**: Reads same cookies, parses JWT directly using Web Crypto API
+**Method**: Edge Runtime compatible JWT validation with Cognito public key verification  
+**Performance**: ~15ms per request (with 5s timeout fallback)  
+**Storage**: Reads same HTTP-only cookies, validates JWT tokens server-side
 
 ## Page Access Flow (How Users Get Into /platform)
 
@@ -126,16 +126,16 @@ const checkAuth = async () => {
 **How getCurrentUser() Works**:
 
 1. Amplify reads HTTP-only cookies automatically
-2. Validates JWT tokens client-side
-3. Returns user object if valid, throws error if invalid
-4. No server round-trip needed
+2. Validates authentication state with Cognito
+3. Returns user object if authenticated, throws error if not
+4. No server round-trip needed for auth state checks
 
-## API Authentication Flow (Different System)
+## API Authentication Flow (Server-Side)
 
 ### Why Different from Page Access?
 
-**Page Access**: Uses Amplify's `getCurrentUser()` - works great client-side  
-**API Routes**: Server-side - `getCurrentUser()` doesn't work in Node.js context
+**Page Access**: Uses Amplify's `getCurrentUser()` - works great in browser context  
+**API Routes**: Server-side middleware - requires JWT validation for security and user attribution
 
 ### API Authentication Steps
 
@@ -208,15 +208,14 @@ export async function authenticateAPI() {
 
 ## Key Differences: Page vs API Authentication
 
-| Aspect          | Page Access (`/platform`)  | API Access (`/api/*`)                          |
-| --------------- | -------------------------- | ---------------------------------------------- |
-| **Method**      | Amplify `getCurrentUser()` | Web Crypto API JWT parsing                     |
-| **Location**    | Client-side React          | Server-side middleware (Edge Runtime)          |
-| **Performance** | Instant (no network)       | ~9000ms per request                              |
-| **Security**    | Amplify validation         | Structure + Signature verification             |
-| **Runtime**     | Browser context            | Edge Runtime compatible                        |
-| **Fallback**    | Redirect to login page     | Graceful degradation with structure validation |
-| **Network**     | cookies      | Resilient to Cognito timeouts                  |
+| Aspect       | Page Access (`/platform`)  | API Access (`/api/*`)                          |
+| ------------ | -------------------------- | ---------------------------------------------- |
+| **Method**   | Amplify `getCurrentUser()` | Web Crypto API JWT parsing                     |
+| **Location** | Client-side React          | Server-side middleware (Edge Runtime)          |
+| **Security** | Amplify validation         | Structure + Signature verification             |
+| **Runtime**  | Browser context            | Edge Runtime compatible                        |
+| **Fallback** | Redirect to login page     | Graceful degradation with structure validation |
+| **Network**  | cookies                    | Resilient to Cognito timeouts                  |
 
 ## Cookie Storage System
 
@@ -263,23 +262,14 @@ CognitoIdentityServiceProvider.[client-id].[username].refreshToken
 - **Route Protection**: Middleware blocks unauthenticated requests
 - **User Attribution**: All API calls logged with user context
 
-## Why This Dual System?
+## Why This Two-Layer System?
 
-### Historical Context
+### Design Rationale
 
-Originally, the platform tried to use Amplify server-side authentication for API routes, but:
+The platform uses two complementary authentication approaches optimized for their respective contexts:
 
-- `getCurrentUser()` consistently failed in server context
-- Amplify server context added 12000ms delay per request
-- Node.js `crypto` module incompatible with Edge Runtime
-- Always had to fall back to JWT parsing anyway
-
-### Current Optimized Approach
-
-- **Page Access**: Use Amplify as intended (client-side)
-- **API Access**: Web Crypto API JWT parsing (Edge Runtime optimized)
-- **Security**: Hybrid approach with cryptographic verification + graceful fallbacks
-- **Result**: 120x faster API authentication while maintaining security
+- **Client-Side (Pages)**: Uses Amplify's `getCurrentUser()` as intended - perfect for browser context
+- **Server-Side (APIs)**: Uses direct JWT validation with Cognito - optimized for Edge Runtime performance
 
 ### Edge Runtime Compatibility
 
@@ -493,11 +483,8 @@ export async function POST/GET/DELETE(request: Request) {
    - `DELETE /api/iot/deleteThing` - Device deletion
 
 2. **Weather Data APIs**
-   - `GET /api/weather/dataset` - Weather dataset retrieval
-   - `GET /api/weather/latest` - Latest weather data
-   - `GET /api/weather/rain` - Rainfall data
-   - `GET /api/weather/wind` - Wind data
-   - `DELETE /api/weather/deleteData` - Weather data deletion
+   - `GET /api/weather/dataset` - Weather dataset retrieval with S3 pre-signed URLs
+   - `GET /api/weather/totalReadings` - Get total count of telemetry readings
 
 ## Authentication State Management
 
@@ -632,7 +619,7 @@ Cached 2 Cognito public keys
 ### Protected API Routes
 
 - `src/app/api/iot/*` - IoT device management endpoints (uses `authenticateAPI()`)
-- `src/app/api/weather/*` - Weather data endpoints (mixed: some use new auth, some legacy)
+- `src/app/api/weather/*` - Weather data endpoints (uses `authenticateAPI()` with full validation)
 
 ### Authentication Components
 

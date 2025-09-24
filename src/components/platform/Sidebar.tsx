@@ -93,7 +93,7 @@ export default function Sidebar() {
       >
         <div className="p-4 flex flex-col h-full overflow-hidden">
           <div className="mb-8">
-            <h2 className="text-xl font-bold text-center truncate">
+            <h2 className="text-2xl font-bold text-center truncate py-3">
               ITea StratoLink
             </h2>
           </div>
