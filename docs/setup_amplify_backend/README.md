@@ -33,6 +33,7 @@ Our Weather Platform uses a hybrid approach:
 ### Configuration
 
 - [IoT Endpoint and Credentials Fetching](./fetchEndpoint/README.md) - AWS STS-based IoT endpoint discovery and credential generation
+- [Environment Configuration](./.env.local) - Local development environment setup with AWS credentials
 
 ### IoT Integration
 
@@ -55,7 +56,12 @@ Our Weather Platform uses a hybrid approach:
 
    - Set up AWS Cognito using the [Authentication Guide](./authentication/README.md)
 
-4. **Deploy to sandbox**:
+4. **Configure environment variables**:
+
+   - Copy `.env.local.example` to `.env.local`
+   - Set your AWS profile and region for local development
+
+5. **Deploy to sandbox**:
    ```bash
    npx ampx sandbox
    ```

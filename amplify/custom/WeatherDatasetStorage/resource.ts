@@ -24,9 +24,14 @@ export class WeatherDatasetStorage extends Construct {
       enablePublicAccess = false,
     } = props;
 
+    const uniqueBucketName =
+      bucketName ||
+      `weather-dataset-${cdk.Aws.STACK_NAME.toLowerCase()}-${
+        cdk.Aws.ACCOUNT_ID
+      }`;
     // Create CDK bucket for weather dataset storage
     this.bucket = new s3.Bucket(this, "WeatherDatasetBucket", {
-      bucketName: bucketName || `weather-dataset-${cdk.Aws.ACCOUNT_ID}`,
+      bucketName: uniqueBucketName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       versioned: enableVersioning,

@@ -127,7 +127,7 @@ export class CustomEventBridge extends Construct {
       this,
       "WeatherDataProcessingStateMachine",
       {
-        definition,
+        definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
         role: stepFunctionRole,
         timeout: Duration.hours(2),
       }

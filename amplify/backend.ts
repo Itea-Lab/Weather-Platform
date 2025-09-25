@@ -39,7 +39,11 @@ const weatherStorage = new WeatherDatasetStorage(
   backend.stack,
   "WeatherDatasetStorage",
   {
-    bucketName: `weather-dataset-${accountId}`,
+    bucketName: `weather-dataset-${accountId}-${
+      backend.stack.stackName.toLowerCase().includes("sandbox")
+        ? "sandbox"
+        : "prod"
+    }`,
   }
 );
 

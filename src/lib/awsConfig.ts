@@ -111,12 +111,26 @@ export async function getAWSAccountInfo(): Promise<{
 }
 
 /**
- * Create a pre-configured Lambda client with the correct region
+ * Create a pre-configured Lambda client with the correct region and credentials
  * @returns Promise<LambdaClient> - Configured Lambda client
  */
 export async function createLambdaClient(): Promise<LambdaClient> {
   const region = await getAWSRegion();
-  return new LambdaClient({ region });
+
+  // Use credential provider chain for different environments
+  const config: any = { region };
+
+  // Only add credentials in local development
+  if (!process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    const { fromNodeProviderChain } = await import(
+      "@aws-sdk/credential-providers"
+    );
+    config.credentials = fromNodeProviderChain({
+      profile: process.env.DEFAULT_PROFILE,
+    });
+  }
+
+  return new LambdaClient(config);
 }
 
 /**

@@ -2,7 +2,7 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { CfnOutput, Stack } from "aws-cdk-lib";
+import { CfnOutput, Stack, Aws } from "aws-cdk-lib";
 
 export interface CustomCloudFrontProps {
   storageBucketName: string;
@@ -20,14 +20,22 @@ export class CustomCloudFront extends Construct {
     super(scope, id);
 
     const stack = Stack.of(this);
+    const stackName = stack.stackName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const accountId = Aws.ACCOUNT_ID;
 
-    // Create Origin Access Control
+    // Create CloudFront-safe unique suffix (only alphanumeric, dashes, underscores)
+    const timestamp = Date.now().toString();
+    const uniqueSuffix = `${stackName}-${accountId.slice(
+      -8
+    )}-${timestamp}`.replace(/[^a-zA-Z0-9-_]/g, "-");
+
+    // Create Origin Access Control with unique name
     const originAccessControl = new cloudfront.CfnOriginAccessControl(
       this,
       "OriginAccessControl",
       {
         originAccessControlConfig: {
-          name: `${id}-weather-dataset-oac`,
+          name: `weather-oac-${uniqueSuffix}`.slice(0, 64), // CloudFront OAC names have 64 char limit
           originAccessControlOriginType: "s3",
           signingBehavior: "always",
           signingProtocol: "sigv4",
@@ -36,17 +44,17 @@ export class CustomCloudFront extends Construct {
       }
     );
 
-    // Create Cache Policy
+    // Create Cache Policy with unique name
     const cachePolicy = new cloudfront.CfnCachePolicy(
       this,
       "WeatherDatasetCachePolicy",
       {
         cachePolicyConfig: {
-          name: `${id}-weather-dataset-cache`,
+          name: `weather-cache-${uniqueSuffix}`.slice(0, 128), // CloudFront cache policy names have 128 char limit
           comment: "Optimized cache policy for weather dataset files",
-          defaultTtl: 86400, // 1 day
-          maxTtl: 2592000, // 30 days
-          minTtl: 3600, // 1 hour
+          defaultTtl: 86400,
+          maxTtl: 2592000,
+          minTtl: 3600,
           parametersInCacheKeyAndForwardedToOrigin: {
             enableAcceptEncodingGzip: true,
             enableAcceptEncodingBrotli: true,
@@ -69,14 +77,13 @@ export class CustomCloudFront extends Construct {
       }
     );
 
-    // Create CloudFront Distribution
+    // Create CloudFront Distribution with unique comment
     this.distribution = new cloudfront.CfnDistribution(
       this,
       "WeatherDatasetCDNDistribution",
       {
         distributionConfig: {
-          comment:
-            "Weather Dataset CDN Distribution - Supports dynamic district paths",
+          comment: `Weather Dataset CDN Distribution - ${uniqueSuffix}`, // ✅ Template literal (this is OK for comment)
           enabled: true,
           httpVersion: "http2and3",
           priceClass: "PriceClass_200",
@@ -107,11 +114,15 @@ export class CustomCloudFront extends Construct {
         tags: [
           {
             key: "Name",
-            value: "weather-dataset-cdn",
+            value: `weather-dataset-cdn-${uniqueSuffix}`,
           },
           {
-            key: "fcj_workshop1",
-            value: "FCJ Workshop 1",
+            key: "Environment",
+            value: stackName.includes("sandbox") ? "Sandbox" : "Production",
+          },
+          {
+            key: "Project",
+            value: "WeatherPlatform",
           },
         ],
       }
@@ -122,7 +133,7 @@ export class CustomCloudFront extends Construct {
       // Use CDK bucket methods to grant access
       props.storageBucket.grantRead(
         new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-        "dataset/*" // Only allow access to dataset folder
+        "dataset/*"
       );
 
       // Add additional statement for CloudFront distribution specific access
@@ -168,7 +179,6 @@ export class CustomCloudFront extends Construct {
     this.domainName = this.distribution.attrDomainName;
     this.distributionId = this.distribution.ref;
 
-    // Create outputs
     new CfnOutput(this, "CloudFrontDistributionId", {
       description: "Weather Dataset CloudFront Distribution ID",
       value: this.distribution.ref,
