@@ -225,27 +225,65 @@ npx ampx sandbox
 npx ampx deploy --branch main
 ```
 
-## Accessing Functions from Frontend
+## Accessing Functions from API Routes
 
-After deployment, your functions will be available in the `amplify_outputs.json` file. You can invoke them from your frontend:
+After deployment, your functions will be available in the `amplify_outputs.json` file. You can invoke them from your Next.js API routes using the Amplify server context:
+
+### Server-Side Invocation (API Routes)
+
+For Next.js API routes, use the Amplify server context to ensure proper authentication and credentials:
 
 ```typescript
-// Example: Invoking a function from your Next.js app
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import outputs from "../amplify_outputs.json";
+// src/app/api/example/route.ts
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { invokeLambdaWithAmplifyContext } from "@/lib/lambdaInvoker";
+import { runWithAmplifyServerContext } from "@/utils/amplifyServerUtils";
 
-const lambdaClient = new LambdaClient({
-  region: outputs.auth.aws_region,
-});
+export async function GET() {
+  return runWithAmplifyServerContext({
+    nextServerContext: { cookies },
+    operation: async (contextSpec) => {
+      try {
+        const result = await invokeLambdaWithAmplifyContext(
+          "yourFunctionNameKey", // Function name key from amplify_outputs.json
+          {
+            /* your payload */
+          },
+          contextSpec
+        );
 
-const invokeLambda = async (functionName: string, payload: any) => {
-  const command = new InvokeCommand({
-    FunctionName: functionName,
-    Payload: JSON.stringify(payload),
+        return NextResponse.json(result, { status: 200 });
+      } catch (error) {
+        console.error("Error invoking Lambda:", error);
+        return NextResponse.json(
+          {
+            error: "Failed to invoke function",
+            message: error instanceof Error ? error.message : "Unknown error",
+          },
+          { status: 500 }
+        );
+      }
+    },
   });
+}
+```
 
-  const response = await lambdaClient.send(command);
-  return JSON.parse(new TextDecoder().decode(response.Payload));
+### Client-Side Invocation (Frontend Components)
+
+For client-side components, call your API routes instead of directly invoking Lambda functions:
+
+```typescript
+// src/components/ExampleComponent.tsx
+const fetchData = async () => {
+  try {
+    const response = await fetch("/api/example");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    throw error;
+  }
 };
 ```
 
@@ -256,7 +294,11 @@ const invokeLambda = async (functionName: string, payload: any) => {
 3. **Logging**: Use `console.log` for debugging, but be mindful of sensitive data
 4. **Timeout**: Set appropriate timeout values based on your function's needs
 5. **Memory**: Allocate memory based on your function's computational requirements
-6. **Runtime**: Use the latest stable Node.js runtime (20.x as of 2024)
+6. **Runtime**: Use the latest stable Node.js runtime (20.x as of 2025)
+7. **Authentication**: Always use `runWithAmplifyServerContext` in API routes for proper credential handling
+8. **Security**: Never return mock data in production - return appropriate error responses instead
+9. **Credentials**: Use Amplify server context in production, AWS CLI profiles for development
+10. **API Design**: Create dedicated API routes for Lambda invocations rather than direct client calls
 
 ## Common Issues and Solutions
 
@@ -270,11 +312,51 @@ import { env } from "$amplify/env/your-function-name";
 
 ### Issue: Permission denied errors
 
-**Solution**: Add the necessary IAM permissions in your `backend.ts` file
+**Solution**: Add the necessary IAM permissions in your `backend.ts` file:
+
+```typescript
+// Grant authenticated users permission to invoke Lambda functions
+const authenticatedRole = backend.auth.resources.authenticatedUserIamRole;
+authenticatedRole.addToPrincipalPolicy(
+  new iam.PolicyStatement({
+    sid: "AllowLambdaInvoke",
+    effect: iam.Effect.ALLOW,
+    actions: ["lambda:InvokeFunction"],
+    resources: [
+      yourFunction.functionArn,
+      // Add other function ARNs
+    ],
+  })
+);
+```
 
 ### Issue: Function not found after deployment
 
 **Solution**: Check that the function is properly exported and included in the backend definition
+
+### Issue: "Could not load credentials from any providers" in production
+
+**Solution**: Ensure you're using `runWithAmplifyServerContext` in your API routes:
+
+```typescript
+export async function GET() {
+  return runWithAmplifyServerContext({
+    nextServerContext: { cookies },
+    operation: async (contextSpec) => {
+      // Your function logic here
+    },
+  });
+}
+```
+
+### Issue: Credential errors in development
+
+**Solution**: Make sure you have `DEFAULT_PROFILE` set in your `.env.local` file:
+
+```env
+DEFAULT_PROFILE=your-aws-profile
+DEFAULT_REGION=us-east-1
+```
 
 ## API Gateway Integration
 

@@ -59,7 +59,7 @@ export async function GET() {
           // This could be enhanced to use a direct S3 count or cached value
           return NextResponse.json({
             success: true,
-            totalReadings: 15000, // Fallback estimate
+            totalReadings: 0, // Fallback estimate
             isEstimate: true,
             fetchedAt: new Date().toISOString(),
             fetchedBy: user?.email || user?.username || "authenticated-user",

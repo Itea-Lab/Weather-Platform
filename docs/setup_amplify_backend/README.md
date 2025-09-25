@@ -15,7 +15,8 @@ Our Weather Platform uses a hybrid approach:
 ### Core Components
 
 - [Manual Amplify Setup](./manual_setup.md) - Complete guide for manual Amplify Gen 2 setup, especially for pnpm on Windows
-- [Lambda Functions Setup](./create_function.md) - Complete guide for creating and deploying Lambda functions
+- [Lambda Functions Setup](./create_function.md) - Complete guide for creating and deploying Lambda functions with Amplify Gen 2 SSR
+- [API Routes Setup](./api_routes.md) - Next.js API routes with Lambda integration and Amplify server context
 - [Authentication Setup](./authentication/README.md) - AWS Cognito authentication configuration
 - [API Gateway Setup](./create_api_gateway.md) - RESTful API and GraphQL setup
 - [CDK Storage Setup](./create_storage.md) - S3 bucket configuration using CDK constructs

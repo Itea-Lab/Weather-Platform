@@ -18,34 +18,17 @@ export async function GET(request: NextRequest) {
         ).custom;
 
         if (!customOutputs?.getDatasetFunctionName) {
-          // Return mock data when Lambda function is not deployed
-          console.warn(
-            "getDataset Lambda function not found, returning mock data"
+          // Return error when Lambda function is not deployed - don't return mock data
+          console.error(
+            "getDataset Lambda function not found in amplify outputs"
           );
           return NextResponse.json(
             {
-              datasets: {
-                district1: {
-                  latest_update: "2025-09-03T05:26:37Z",
-                  url: "https://d1wbddrjyd2c3o.cloudfront.net/dataset/district1/all_data_20250903_052637.csv/part-00000.csv",
-                  size_bytes: 2576980377,
-                  size_formatted: "2.4 GB",
-                },
-                district2: {
-                  latest_update: "2025-09-03T04:15:22Z",
-                  url: "https://d1wbddrjyd2c3o.cloudfront.net/dataset/district2/all_data_20250903_041522.csv/part-00000.csv",
-                  size_bytes: 1835008000,
-                  size_formatted: "1.7 GB",
-                },
-                district5: {
-                  latest_update: "2025-09-03T03:45:12Z",
-                  url: "https://d1wbddrjyd2c3o.cloudfront.net/dataset/district5/all_data_20250903_034512.csv/part-00000.csv",
-                  size_bytes: 3221225472,
-                  size_formatted: "3.0 GB",
-                },
-              },
+              error: "Dataset service unavailable",
+              message: "Dataset Lambda function is not deployed or configured",
+              datasets: {},
             },
-            { status: 200 }
+            { status: 503 }
           );
         }
 
