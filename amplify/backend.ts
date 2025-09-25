@@ -152,6 +152,8 @@ authenticatedRole.addToPrincipalPolicy(
       fetchThingsLambda.functionArn,
       deleteThingLambda.functionArn,
       getIoTEndpointLambda.functionArn,
+      getDatasetLambda.functionArn,
+      getTotalReadingsLambda.functionArn,
     ],
   })
 );

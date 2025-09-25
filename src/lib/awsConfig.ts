@@ -1,6 +1,7 @@
 import { STSClient } from "@aws-sdk/client-sts";
 import { LambdaClient } from "@aws-sdk/client-lambda";
 import { IoTClient } from "@aws-sdk/client-iot";
+import { fetchAuthSession } from "aws-amplify/auth/server";
 
 // Cache for AWS region to avoid multiple STS calls
 let cachedRegion: string | null = null;
@@ -162,6 +163,64 @@ export async function createLambdaClient(): Promise<LambdaClient> {
   }
 
   return new LambdaClient(config);
+}
+
+/**
+ * Create a pre-configured Lambda client using Amplify server context
+ * @param contextSpec - Amplify server context specification
+ * @returns Promise<LambdaClient> - Configured Lambda client with Amplify credentials
+ */
+export async function createLambdaClientWithAmplifyContext(
+  contextSpec: any
+): Promise<LambdaClient> {
+  const region = await getAWSRegion();
+
+  // Detect environment - prefer CLI profile for development
+  const isProduction = !!(
+    (
+      process.env.AWS_EXECUTION_ENV || // Lambda functions
+      process.env.AWS_LAMBDA_FUNCTION_NAME || // Lambda functions
+      process.env.AWS_ACCESS_KEY_ID || // Amplify hosting with credentials
+      process.env.AMPLIFY_BRANCH
+    ) // Amplify environment indicator
+  );
+
+  // For development, use CLI profile instead of Cognito credentials
+  if (!isProduction && process.env.DEFAULT_PROFILE) {
+    console.log(
+      "Development environment: Using AWS CLI profile for Lambda client"
+    );
+    return createLambdaClient();
+  }
+
+  // For production, try to use Amplify server context
+  try {
+    console.log(
+      "Production environment: Using Amplify server context for Lambda client"
+    );
+    const session = await fetchAuthSession(contextSpec);
+
+    if (!session.credentials) {
+      throw new Error("No credentials available from Amplify session");
+    }
+
+    return new LambdaClient({
+      region,
+      credentials: {
+        accessKeyId: session.credentials.accessKeyId,
+        secretAccessKey: session.credentials.secretAccessKey,
+        sessionToken: session.credentials.sessionToken,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Failed to create Lambda client with Amplify context:",
+      error
+    );
+    // Fallback to the original client creation method
+    console.log("Falling back to standard Lambda client creation...");
+    return createLambdaClient();
+  }
 }
 
 /**
