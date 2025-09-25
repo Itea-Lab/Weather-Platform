@@ -35,15 +35,21 @@ const region = addThingLambda.stack.region;
 const accountId = addThingLambda.stack.account;
 
 // Create custom CDK storage construct for weather dataset
+// Extract branch name from stack name for unique naming
+const stackName = backend.stack.stackName.toLowerCase();
+const branchName = stackName.includes("sandbox")
+  ? "sandbox"
+  : stackName.includes("dev")
+  ? "dev"
+  : stackName.includes("prod")
+  ? "prod"
+  : "default";
+
 const weatherStorage = new WeatherDatasetStorage(
   backend.stack,
   "WeatherDatasetStorage",
   {
-    bucketName: `weather-dataset-${accountId}-${
-      backend.stack.stackName.toLowerCase().includes("sandbox")
-        ? "sandbox"
-        : "prod"
-    }`,
+    bucketName: `weather-dataset-${accountId}-${branchName}`,
   }
 );
 
@@ -276,6 +282,7 @@ const eventBridge = new CustomEventBridge(
     accountId,
     region,
     crawlerName: weatherDataGlue.crawler.name!,
+    jobName: weatherDataGlue.job.name!,
   }
 );
 

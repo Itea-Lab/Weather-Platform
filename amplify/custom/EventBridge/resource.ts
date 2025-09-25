@@ -11,6 +11,7 @@ export interface CustomEventBridgeProps {
   accountId: string;
   region: string;
   crawlerName: string;
+  jobName: string;
 }
 
 export class CustomEventBridge extends Construct {
@@ -20,11 +21,15 @@ export class CustomEventBridge extends Construct {
   constructor(scope: Construct, id: string, props: CustomEventBridgeProps) {
     super(scope, id);
 
-    const { accountId, region, crawlerName } = props;
+    const { accountId, region, crawlerName, jobName } = props;
+
+    // Generate unique suffix for resources based on crawler name
+    const uniqueSuffix = crawlerName.split("-").pop() || "default";
+    const ruleName = `WeatherDataProcessingRule-${uniqueSuffix}`;
 
     // Create EventBridge rule for midnight UTC+7 (17:00 UTC) every Sunday
     this.rule = new events.Rule(this, "WeatherDataProcessingRule", {
-      ruleName: "WeatherDataProcessingRule",
+      ruleName: ruleName,
       description:
         "Triggers weather data processing pipeline at midnight UTC+7 every Sunday",
       schedule: events.Schedule.cron({
@@ -92,7 +97,7 @@ export class CustomEventBridge extends Construct {
       this,
       "StartGlueJob",
       {
-        glueJobName: "WeatherDataTransformJob",
+        glueJobName: jobName,
         integrationPattern: stepfunctions.IntegrationPattern.RUN_JOB,
       }
     );
