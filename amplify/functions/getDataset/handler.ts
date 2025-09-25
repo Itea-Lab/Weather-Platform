@@ -12,7 +12,7 @@ interface DatasetResponse {
   datasets: Record<string, DatasetInfo>;
 }
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const s3Client = new S3Client({ region: process.env.DEFAULT_REGION });
 
 export const handler: Handler = async (event, context) => {
   try {

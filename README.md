@@ -101,8 +101,8 @@ pnpm install
 Create a `.env.local` file in the root directory:
 
 ```env
-# AWS Configuration (Optional - auto-detected from AWS CLI)
-AWS_REGION=us-east-1
+# AWS Configuration
+DEFAULT_REGION=us-east-1
 ```
 
 > **Note:** Most configuration is automatically handled by Amplify. The `.env.local` file is mainly for development overrides.
@@ -168,7 +168,7 @@ For production deployment with manual setup:
 
    Add these if needed:
 
-   - `AWS_REGION`: `us-east-1` (or your region)
+   - `DEFAULT_REGION`: `us-east-1` (or your region)
 
 4. **Deploy:**
 

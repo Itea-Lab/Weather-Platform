@@ -193,7 +193,7 @@ const iotClient = new AWSIotProvider({
 ```typescript
 // Get region from environment variable, fallback to us-east-1 if not set
 const region =
-  process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+  process.env.DEFAULT_REGION || "us-east-1";
 
 // Create AWS service client with dynamic region
 const client = new SomeAWSClient({ region });
@@ -408,15 +408,13 @@ const iotConfig = {
 Lambda functions automatically receive:
 
 - `AWS_REGION`: Current region (e.g., "us-east-1")
-- `AWS_DEFAULT_REGION`: Default region if AWS_REGION is not set
 
 #### Next.js Runtime
 
 For local development, set environment variables:
 
 ```bash
-AWS_REGION=us-east-1
-AWS_DEFAULT_REGION=us-east-1
+DEFAULT_REGION=us-east-1
 ```
 
 #### Amplify Configuration

@@ -145,7 +145,7 @@ export const handler: Handler = async (event, context) => {
 
   try {
     // Initialize AWS clients
-    const s3Client = new S3Client({ region: process.env.AWS_REGION });
+    const s3Client = new S3Client({ region: process.env.DEFAULT_REGION });
 
     // Access dataset from S3 storage
     // Bucket name and other resources are available through Amplify configuration

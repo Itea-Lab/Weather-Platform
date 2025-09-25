@@ -11,7 +11,7 @@ import {
 } from "@aws-sdk/client-iot";
 
 export const handler: Handler = async (event) => {
-  const region = process.env.AWS_REGION!;
+  const region = process.env.DEFAULT_REGION!;
 
   // Initialize AWS clients
   const iot = new IoTClient({ region });

@@ -4,7 +4,7 @@ import { AddThingPayload } from "@/types/lambda";
 // Create Lambda client with environment region (used internally by lambdaInvoker)
 function createLambdaClientWithEnvRegion(): LambdaClient {
   const region =
-    process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+    process.env.DEFAULT_REGION || "us-east-1";
   return new LambdaClient({ region });
 }
 

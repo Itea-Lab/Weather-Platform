@@ -7,7 +7,7 @@ export const handler = async (event: any) => {
   try {
     // Get the region from AWS environment variable
     const region =
-      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+      process.env.DEFAULT_REGION || "us-east-1";
     console.log(`Using region: ${region}`);
 
     // Get account ID using STS

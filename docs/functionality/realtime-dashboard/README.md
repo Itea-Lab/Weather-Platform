@@ -236,7 +236,7 @@ export default function WindChart() {
 
 ```env
 # AWS Configuration
-AWS_REGION=your-aws-region
+DEFAULT_REGION=your-aws-region
 AWS_IOT_ENDPOINT=your-iot-endpoint
 
 # Topic Configuration

@@ -282,8 +282,8 @@ export function useDevices() {
 ### Environment Variables
 
 ```bash
-# AWS Configuration (automatically configured by Amplify)
-AWS_REGION=us-east-1
+# AWS Configuration
+DEFAULT_REGION=us-east-1
 AWS_IOT_THING_GROUP_NAME=ITeaWeatherHub
 ```
 

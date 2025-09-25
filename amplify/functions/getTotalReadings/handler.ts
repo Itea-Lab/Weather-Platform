@@ -1,7 +1,7 @@
 import type { Handler } from "aws-lambda";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const s3Client = new S3Client({ region: process.env.DEFAULT_REGION });
 
 export const handler: Handler = async (event, context) => {
   try {

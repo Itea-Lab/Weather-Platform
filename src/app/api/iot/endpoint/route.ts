@@ -33,7 +33,7 @@ export async function GET() {
   try {
     // Get region from environment variable as fallback only
     const region =
-      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+      process.env.DEFAULT_REGION || "us-east-1";
     console.log(`Using fallback region: ${region}`);
 
     // Create STS client to get account identity
