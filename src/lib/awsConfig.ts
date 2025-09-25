@@ -117,17 +117,48 @@ export async function getAWSAccountInfo(): Promise<{
 export async function createLambdaClient(): Promise<LambdaClient> {
   const region = await getAWSRegion();
 
-  // Use credential provider chain for different environments
+  // Detect environment and configure credentials accordingly
+  const isProduction = !!(
+    (
+      process.env.AWS_EXECUTION_ENV || // Lambda functions
+      process.env.AWS_LAMBDA_FUNCTION_NAME || // Lambda functions
+      process.env.AWS_ACCESS_KEY_ID || // Amplify hosting with credentials
+      process.env.AMPLIFY_BRANCH
+    ) // Amplify environment indicator
+  );
+
+  console.log("AWS Config environment detection:", {
+    isProduction,
+    region,
+    hasAwsCredentials: !!process.env.AWS_ACCESS_KEY_ID,
+    amplifyBranch: process.env.AMPLIFY_BRANCH,
+  });
+
   const config: any = { region };
 
-  // Only add credentials in local development
-  if (!process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (isProduction) {
+    // Production: Use provided credentials or let AWS SDK use IAM roles
+    if (process.env.AWS_ACCESS_KEY_ID) {
+      config.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        ...(process.env.AWS_SESSION_TOKEN && {
+          sessionToken: process.env.AWS_SESSION_TOKEN,
+        }),
+      };
+      console.log("Using explicit AWS credentials");
+    } else {
+      console.log("Using IAM roles (no explicit credentials)");
+    }
+  } else {
+    // Development: Use AWS CLI profile
     const { fromNodeProviderChain } = await import(
       "@aws-sdk/credential-providers"
     );
     config.credentials = fromNodeProviderChain({
       profile: process.env.DEFAULT_PROFILE,
     });
+    console.log(`Using AWS CLI profile: ${process.env.DEFAULT_PROFILE}`);
   }
 
   return new LambdaClient(config);
