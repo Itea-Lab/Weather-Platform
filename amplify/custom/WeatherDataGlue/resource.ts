@@ -30,8 +30,13 @@ export class CustomWeatherDataGlue extends Construct {
     } = props;
 
     // Create Glue Database with configurable name
-    const dbName =
-      databaseName || `weather_data_catalog_${this.node.addr.substring(0, 8)}`;
+    const uniqueSuffix = this.node.addr.substring(0, 8);
+    const dbName = databaseName || `weather_data_catalog_${uniqueSuffix}`;
+
+    // Generate unique names for Glue resources
+    const crawlerName = `WeatherPlatformCrawler-${uniqueSuffix}`;
+    const jobName = `WeatherDataTransformJob-${uniqueSuffix}`;
+
     this.database = new glue.CfnDatabase(this, "WeatherDataCatalog", {
       catalogId: accountId,
       databaseInput: {
@@ -104,7 +109,7 @@ export class CustomWeatherDataGlue extends Construct {
           `arn:aws:glue:${region}:${accountId}:catalog`,
           `arn:aws:glue:${region}:${accountId}:database/${dbName}`,
           `arn:aws:glue:${region}:${accountId}:table/${dbName}/*`,
-          `arn:aws:glue:${region}:${accountId}:crawler/WeatherPlatformCrawler`,
+          `arn:aws:glue:${region}:${accountId}:crawler/${crawlerName}`,
           `arn:aws:glue:${region}:${accountId}:partition/${dbName}/*/*`,
         ],
       })
@@ -147,15 +152,13 @@ export class CustomWeatherDataGlue extends Construct {
           "glue:GetJobRuns",
           "glue:BatchStopJobRun",
         ],
-        resources: [
-          `arn:aws:glue:${region}:${accountId}:job/WeatherDataTransformJob`,
-        ],
+        resources: [`arn:aws:glue:${region}:${accountId}:job/${jobName}`],
       })
     );
 
     // Create Glue Crawler
     this.crawler = new glue.CfnCrawler(this, "WeatherPlatformCrawler", {
-      name: "WeatherPlatformCrawler",
+      name: crawlerName,
       role: glueRole.roleArn,
       databaseName: this.database.ref,
       targets: {
@@ -185,7 +188,7 @@ export class CustomWeatherDataGlue extends Construct {
 
     // Create Glue Job for data transformation
     this.job = new glue.CfnJob(this, "WeatherDataTransformJob", {
-      name: "WeatherDataTransformJob",
+      name: jobName,
       role: glueRole.roleArn,
       command: {
         name: "glueetl",
