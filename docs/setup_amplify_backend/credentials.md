@@ -27,13 +27,7 @@ The application automatically detects the environment and uses appropriate crede
    aws configure --profile your-profile-name
    ```
 
-2. **Copy environment template**:
-
-   ```bash
-   cp .env.local.example .env.local
-   ```
-
-3. **Set environment variables** in `.env.local`:
+2. **Set environment variables** in `.env.local`:
    ```env
    DEFAULT_PROFILE=your-profile-name
    DEFAULT_REGION=us-east-1
