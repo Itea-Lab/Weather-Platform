@@ -9,7 +9,6 @@ export async function GET() {
     nextServerContext: { cookies },
     operation: async (contextSpec) => {
       try {
-        // Authentication already validated by middleware - get user info for logging
         const user = await authenticateAPI("totalReadings");
         console.log(
           `Route: User info for totalReadings: ${

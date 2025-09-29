@@ -18,6 +18,7 @@ Sandboxes are identical in fidelity to your production environments. Code change
 ### Amplify Gen 2 vs Gen 1 CLI Tools
 
 **Important Distinction:**
+
 - `amplify` CLI = **Amplify Gen 1** (legacy, not supported for new projects)
 - `ampx` CLI = **Amplify Gen 2** (current, what we use)
 
@@ -32,6 +33,7 @@ Both `create-amplify` and the legacy `amplify` CLI throw this error on Windows:
 Because Amplify tooling uses nested node_modules, which conflicts with pnpm's flat symlink architecture on Windows.
 
 **Important:** You cannot use:
+
 - `create-amplify` (Gen 2 scaffolding tool)
 - `amplify init` (Gen 1 legacy command)
 - Any `amplify` commands (these are Gen 1 only)
@@ -44,7 +46,7 @@ Because Amplify tooling uses nested node_modules, which conflicts with pnpm's fl
 
 Add amplify packages to your current project:
 
-```bash
+````bash
 pnpm add -D @aws-amplify/backend @aws-amplify/backend-cli typescript aws-cdk-lib constructs @aws-amplify/adapter-nextjs
 
 **Note**: Install the Amplify Gen 2 CLI globally using npm (works on all platforms):
@@ -55,7 +57,7 @@ npm install -g @aws-amplify/backend-cli
 
 # DO NOT install the legacy Gen 1 CLI:
 # npm install -g @aws-amplify/cli  ❌ (This is Gen 1, deprecated)
-```
+````
 
 **Important:** Always use `ampx` commands, never `amplify` commands (Gen 1).
 
@@ -215,7 +217,7 @@ If this is not the region you are expecting to bootstrap, check for any AWS envi
 After bootstrap completion, run the command again to initialize sandbox:
 
 ```bash
-npx ampx sandbox
+npx ampx sandbox --once
 ```
 
 ### Terminate Sandbox
@@ -239,7 +241,7 @@ Monitor your AWS costs regularly when using sandbox environments.
 After successful sandbox setup:
 
 1. [Set up Lambda Functions](./create_function.md)
-2. [Configure API Gateway](./create_api_gateway.md)
+2. [Set up Custom Services (CDK Constructs)](./custom_services.md)
 3. [Set up Storage](./create_storage.md)
 4. [Configure IoT Device Management](./add_device.md/README.md)
 

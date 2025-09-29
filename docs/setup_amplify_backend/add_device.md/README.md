@@ -47,13 +47,6 @@ The application uses a centralized AWS configuration system (`src/lib/awsConfig.
 - **Caching**: Caches region detection to avoid repeated STS calls
 - **Error Handling**: Graceful fallbacks when region detection fails
 
-**Benefits:**
-
-- Single source of truth for AWS configuration
-- Improved performance through caching
-- Consistent error handling across all AWS service calls
-- Easier testing and maintenance
-
 **Package Usage:**
 
 - `@aws-sdk/client-iot`: Core IoT operations (create things, certificates, attach policies)
