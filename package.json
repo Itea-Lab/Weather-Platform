@@ -1,6 +1,6 @@
 {
   "name": "weather-dashboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -12,7 +12,7 @@
     "@aws-amplify/adapter-nextjs": "^1.6.8",
     "@aws-amplify/pubsub": "^6.1.61",
     "@aws-sdk/client-iot": "^3.864.0",
-    "@aws-sdk/client-lambda": "^3.865.0",
+    "@aws-sdk/client-lambda": "^3.946.0",
     "@aws-sdk/client-s3": "^3.946.0",
     "@aws-sdk/client-sts": "^3.946.0",
     "@aws-sdk/credential-providers": "^3.896.0",
@@ -23,11 +23,11 @@
     "aws-amplify": "^6.15.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "lucide-react": "^0.506.0",
+    "lucide-react": "^0.556.0",
     "next": "15.4.8",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^2.15.3",
+    "react": "19.1.2",
+    "react-dom": "19.1.2",
+    "recharts": "^3.5.1",
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.0"
   },
@@ -35,17 +35,26 @@
     "@aws-amplify/backend": "^1.16.1",
     "@aws-amplify/backend-cli": "^1.8.0",
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "4.1.17",
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "aws-cdk-lib": "^2.195.0",
+    "aws-cdk-lib": "2.232.1",
     "constructs": "^10.3.0",
     "esbuild": "^0.25.6",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
-    "tailwindcss": "^4",
+    "tailwindcss": "4.1.17",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "glob": ">=11.1.0",
+      "js-yaml": ">=4.1.1",
+      "@eslint/plugin-kit": ">=0.3.4",
+      "brace-expansion": ">=2.0.2",
+      "tmp": ">=0.2.4"
+    }
   }
 }
